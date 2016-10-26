@@ -1,0 +1,1 @@
+print(*(x for x in ('{}{}'.format((not i%3 or '') and 'Fizz', (not i%5 or '') and 'Buzz') for i in range(1, 101)) if x), sep='\n')
