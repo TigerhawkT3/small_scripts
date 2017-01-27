@@ -7,47 +7,34 @@
 
 std::string words [] = { "hello", "python" };
 
-std::string * user_guess(std::string current, std::string word) {
+void user_guess(std::string &current, std::string &word) {
 	std::cout << "Current state: " << current << std::endl;
-	std::string guess;
+	char guess;
 	std::cin >> guess;
-	std::string returned [2];
 	if (word.find(guess) != std::string::npos &&
 		current.find(guess) == std::string::npos) {
-		const int length = word.length();
-		std::string * result;
-		result = new std::string[length];
-		for (int i = 0;
-			i < length; ++i) {
-			result[i] = word[i] == guess[0] ? word[i] : current[i];
+		char *c, *w;
+		for (c = &current[0], w = &word[0];
+			 c < &current[0] + current.length();
+			 ++c, ++w) {
+			*c = *w == guess ? *w : *c;
 		}
-		returned[0] = *result;
-		returned[1] = word;
 	}
 	else {
 		std::cout << "Nope! " << guess << " is not in the word." << std::endl;
-		returned[0] = current;
-		returned[1] = word;
 	}
-	return returned;
 }
 
 int main()
 {
 	for (std::string word : words) {
 		int remaining = 5;
-		std::string current = "";
-		for (unsigned int i = 0; i < word.length(); ++i) {
-			current += "*";
-		}
+		std::string current = std::string(word.length(), '*');
 		std::string old_state;
 		bool broke = false;
 		while (remaining > 0) {
 			old_state = current;
-			std::string * ug;
-			ug = user_guess(current, word);
-			current = ug[0];
-			word = ug[1];
+			user_guess(current, word);
 			if (old_state == current) {
 				--remaining;
 				std::cout << "Remaining guesses: " << remaining << std::endl;
