@@ -27,6 +27,26 @@ Loop 11 {
 +Pause::MouseMove, x1, y
 !Pause::MouseMove, x2, y
 
+; click at a locations, c times, d delay
+CycleThrough() {
+    global locations
+    InputBox, numbuttons, Buttons, Which saved buttons (1-11)?
+    InputBox, numrepetitions, Repetitions, How many times?
+    InputBox, delay, Delay, Delay? E.g. 60 for 1 minute.
+    Loop % numrepetitions {
+        Loop % numbuttons {
+            MouseMove, locations[A_index][1], locations[A_index][2]
+            Click
+            Sleep, 1000
+        }
+        if A_index != numrepetitions
+            Sleep, delay * 1000
+    }
+    return
+}
+
+!+Pause::CycleThrough()
+
 ; swap to last swapped location
 Pause::
     if (count) {
