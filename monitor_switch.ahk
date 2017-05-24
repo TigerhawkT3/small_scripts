@@ -27,17 +27,21 @@ Loop 11 {
 +Pause::MouseMove, x1, y
 !Pause::MouseMove, x2, y
 
-; click at a locations, c times, d delay
+; click at a locations, b pause, c times, d delay
+; uses MouseMove and then Click instead of just Click at the coords,
+; because MouseMove can handle expressions but Click can't
 CycleThrough() {
     global locations
-    InputBox, numbuttons, Buttons, Which saved buttons (1-11)?
+    InputBox, numbuttons, Buttons, Which saved buttons (e.g. 11 for 1-11)?
+    InputBox, pausetime, Pause time, Pause how many seconds between clicks (decimal okay)?
     InputBox, numrepetitions, Repetitions, How many times?
-    InputBox, delay, Delay, Delay? E.g. 60 for 1 minute.
+    InputBox, delay, Delay, Pause how many seconds between cycles (decimal okay)?
     Loop % numrepetitions {
         Loop % numbuttons {
             MouseMove, locations[A_index][1], locations[A_index][2]
+            Sleep, pausetime * 1000
             Click
-            Sleep, 1000
+            Sleep, pausetime * 1000
         }
         if A_index != numrepetitions
             Sleep, delay * 1000
