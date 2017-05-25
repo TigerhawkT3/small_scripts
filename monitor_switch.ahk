@@ -33,7 +33,7 @@ Loop 11 {
 CycleThrough() {
     global locations
     InputBox, numbuttons, Buttons, Which saved buttons (e.g. 11 for 1-11)?
-    InputBox, pausetime, Padding time, How many seconds padding around clicks (decimal okay)?
+    InputBox, padding, Padding time, How many seconds padding around clicks (decimal okay)?
     InputBox, numrepetitions, Repetitions, How many times?
     InputBox, delay, Delay, Pause how many seconds between cycles (decimal okay)?
     Loop % numrepetitions {
