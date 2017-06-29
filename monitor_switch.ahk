@@ -27,7 +27,7 @@ Loop 11 {
 +Pause::MouseMove, x1, y
 !Pause::MouseMove, x2, y
 
-; click at a locations, b padding, c times, d delay
+; click at a locations, b padding, c times, d delay, e button
 ; uses MouseMove and then Click instead of just Click at the coords,
 ; because MouseMove can handle expressions but Click can't
 CycleThrough() {
@@ -36,11 +36,12 @@ CycleThrough() {
     InputBox, padding, Padding time, How many seconds padding around clicks (decimal okay)?
     InputBox, numrepetitions, Repetitions, How many times?
     InputBox, delay, Delay, Pause how many seconds between cycles (decimal okay)?
+    InputBox, mbutton, Left/Right, Which mouse button? L=Left (default)`, R=Right`, M=Middle`, X1=Button4`, X2=Button5.(default is Left)?
     Loop % numrepetitions {
         Loop % numbuttons {
             MouseMove, locations[A_index][1], locations[A_index][2]
             Sleep, padding * 500
-            Click
+            Click %mbutton%
             Sleep, padding * 500
         }
         if A_index != numrepetitions
