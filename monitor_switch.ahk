@@ -32,25 +32,34 @@ Loop 11 {
 ; because MouseMove can handle expressions but Click can't
 CycleThrough() {
     global locations
+    global interrupted
     InputBox, numbuttons, Buttons, Which saved buttons (e.g. 11 for 1-11)?
     InputBox, padding, Padding time, How many seconds padding around clicks (decimal okay)?
     InputBox, numrepetitions, Repetitions, How many times?
     InputBox, delay, Delay, Pause how many seconds between cycles (decimal okay)?
     InputBox, mbutton, Left/Right, Which mouse button? L=Left (default)`, R=Right`, M=Middle`, X1=Button4`, X2=Button5.(default is Left)?
+    interrupted := false
     Loop % numrepetitions {
         Loop % numbuttons {
             MouseMove, locations[A_index][1], locations[A_index][2]
             Sleep, padding * 500
+            if (interrupted)
+                break
             Click %mbutton%
             Sleep, padding * 500
         }
-        if A_index != numrepetitions
+        if (A_index != numrepetitions) {
+            if (interrupted)
+                break
             Sleep, delay * 1000
+        }
     }
     return
 }
 
 !+Pause::CycleThrough()
+; alt-esc to abort CycleThrough mid-cycle
+!Esc::interrupted := true
 
 ; swap to last swapped location
 Pause::
