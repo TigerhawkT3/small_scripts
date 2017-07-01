@@ -33,11 +33,16 @@ Loop 11 {
 CycleThrough() {
     global locations
     global interrupted
-    InputBox, numbuttons, Buttons, Which saved buttons (e.g. 11 for 1-11)?
-    InputBox, padding, Padding time, How many seconds padding around clicks (decimal okay)?
-    InputBox, numrepetitions, Repetitions, How many times?
-    InputBox, delay, Delay, Pause how many seconds between cycles (decimal okay)?
-    InputBox, mbutton, Left/Right, Which mouse button? L=Left (default)`, R=Right`, M=Middle`, X1=Button4`, X2=Button5.
+    global numbuttons
+    global padding
+    global numrepetitions
+    global delay
+    global mbutton
+    InputBox, numbuttons, Buttons, Which saved buttons (e.g. 11 for 1-11)?, , , , , , , , %numbuttons%
+    InputBox, padding, Padding time, How many seconds padding around clicks (decimal okay)?, , , , , , , , %padding%
+    InputBox, numrepetitions, Repetitions, How many times?, , , , , , , , %numrepetitions%
+    InputBox, delay, Delay, Pause how many seconds between cycles (decimal okay)?, , , , , , , , %delay%
+    InputBox, mbutton, Left/Right, Which mouse button? L=Left (default)`, R=Right`, M=Middle`, X1=Button4`, X2=Button5., , , , , , , , %mbutton%
     interrupted := false
     Loop % numrepetitions {
         Loop % numbuttons {
