@@ -37,7 +37,7 @@ CycleThrough() {
     InputBox, padding, Padding time, How many seconds padding around clicks (decimal okay)?
     InputBox, numrepetitions, Repetitions, How many times?
     InputBox, delay, Delay, Pause how many seconds between cycles (decimal okay)?
-    InputBox, mbutton, Left/Right, Which mouse button? L=Left (default)`, R=Right`, M=Middle`, X1=Button4`, X2=Button5.(default is Left)?
+    InputBox, mbutton, Left/Right, Which mouse button? L=Left (default)`, R=Right`, M=Middle`, X1=Button4`, X2=Button5.
     interrupted := false
     Loop % numrepetitions {
         Loop % numbuttons {
