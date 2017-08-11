@@ -16,59 +16,101 @@ rx1 := x1
 ry1 := y
 rx2 := x2
 ry1 := y
-count := 0
+count := false
 locations := []
+slots := []
+bank := 0
 
-Loop 11 {
+Loop 10
+    slots.Push({})
+
+Loop 100
     locations.Push([0,0])
-}
 
 ; shift-pause to snap to left monitor, alt-pause to right
 +Pause::MouseMove, x1, y
 !Pause::MouseMove, x2, y
 
-; click at a locations, b padding, c times, d delay, e button
-; uses MouseMove and then Click instead of just Click at the coords,
-; because MouseMove can handle expressions but Click can't
-CycleThrough() {
-    global locations
-    global interrupted
-    global numbuttons
-    global padding
-    global numrepetitions
-    global delay
-    global mbutton
-    InputBox, numbuttons, Buttons, Which saved buttons (e.g. 11 for 1-11)?, , , , , , , , %numbuttons%
-    InputBox, padding, Padding time, How many seconds padding around clicks (decimal okay)?, , , , , , , , %padding%
-    InputBox, numrepetitions, Repetitions, How many times?, , , , , , , , %numrepetitions%
-    InputBox, delay, Delay, Pause how many seconds between cycles (decimal okay)?, , , , , , , , %delay%
-    InputBox, mbutton, Left/Right, Which mouse button? L=Left (default)`, R=Right`, M=Middle`, X1=Button4`, X2=Button5., , , , , , , , %mbutton%
-    interrupted := false
-    Loop % numrepetitions {
-        Loop % numbuttons {
-            MouseMove, locations[A_index][1], locations[A_index][2]
-            Sleep, padding * 500
-            if (interrupted)
-                break
-            Click %mbutton%
-            Sleep, padding * 500
+parse_range(s) {
+    ; s := "1, 2, 5-9, 2" returns [1, 2, 5, 6, 7, 8, 9, 2]
+    numbers := []
+    result := StrSplit(s, ",", " `t")
+    for i,var in result {
+        IfInString, var, - 
+        {
+            temp := StrSplit(var, "-")
+            Loop % temp[2]-temp[1] + 1
+                numbers.Push(A_index+temp[1]-1)
         }
-        if (A_index != numrepetitions) {
-            if (interrupted)
-                break
-            Sleep, delay * 1000
-        }
+        else
+            numbers.Push(var)
     }
-    return
+    return numbers
 }
 
-!+Pause::CycleThrough()
-; alt-esc to abort CycleThrough mid-cycle
+expand_sequence(range, seq) {
+    ; range := [1, 4, 9], seq := "L R" returns ["L", "R", "L"]
+    sequence := []
+    seq := StrSplit(seq, " ")
+    Loop % range.Length() {
+        idx := mod(A_index, seq.Length())
+        sequence.Push(seq[idx?idx:seq.Length()])
+    }
+    return sequence
+}
+
+; save a setup of locations, padding, repetitions,
+; delay, and button sequence in a chosen slot
+create_cycle() {
+    global locations
+    global slots
+    InputBox, range, Numbers?, Enter a range of locations e.g. "1`, 2`, 5-9`, 2"
+    InputBox, padding, Padding time, How many seconds padding around clicks (decimal okay)?
+    InputBox, numrepetitions, Repetitions, How many times?
+    InputBox, delay, Delay, Pause how many seconds between cycles (decimal okay)?
+    InputBox, buttons, Button sequence, Enter a mouse button sequence to repeat`, like "L R R". L=Left`, R=Right`, M=Middle`, X1=Button4`, X2=Button5.
+    InputBox, slot, Save slot, Save this in slot 1-10 or cancel (blank)?
+    if !slot
+        return
+    range := parse_range(range)
+    slots[slot] := {"range":range, "padding":padding
+                    ,"numrepetitions":numrepetitions, "delay":delay
+                    ,"buttons":expand_sequence(range, buttons)}
+}
+
+; uses MouseMove and then Click instead of just Click at the coords,
+; because MouseMove can handle expressions but Click can't
+do_slot(num) {
+    global interrupted
+    global locations
+    global slots
+    interrupted := false
+    InputBox, numrepetitions, Repetitions, How many times?, , , , , , , , % slots[num]["numrepetitions"]
+    slots[num]["numrepetitions"] := numrepetitions
+    Loop % numrepetitions {
+        for i,loc in slots[num]["range"] {
+            MouseMove, locations[loc+1][1], locations[loc+1][2]
+            Sleep, slots[num]["padding"] * 500
+            if interrupted
+                break
+            Click % slots[num]["buttons"][i]
+            Sleep, slots[num]["padding"] * 500
+        }
+        if (A_index != slots[num]["numrepetitions"]) {
+            if interrupted
+                break
+            Sleep, slots[num]["delay"] * 1000
+        }
+    }
+}
+
+!+Pause::create_cycle()
+; alt-esc to abort do_slot mid-cycle
 !Esc::interrupted := true
 
 ; swap to last swapped location
 Pause::
-    if (count) {
+    if count {
         MouseGetPos, tempx, tempy
         if (Abs(tempx-rx2)<5 && Abs(tempy-ry2)<5) {
             return
@@ -76,7 +118,6 @@ Pause::
         rx1 := tempx
         ry1 := tempy
         MouseMove, rx2, ry2
-        count--
     }
     else {
         MouseGetPos, tempx, tempy
@@ -86,8 +127,8 @@ Pause::
         rx2 := tempx
         ry2 := tempy
         MouseMove, rx1, ry1
-        count++
     }
+    count := !count
     return
 
 ; Ctrl+Shift+NumpadNumber to save a hotspot
@@ -95,15 +136,21 @@ Pause::
 
 MoveLocation(ID) {
     global locations
-    MouseMove, locations[ID][1], locations[ID][2]
+    global bank
+    MouseMove, locations[10*bank+ID+1][1], locations[10*bank+ID+1][2]
 }
 
 SaveLocation(ID) {
     MouseGetPos, x, y
     global locations
-    locations[ID] := [x, y]
+    global bank
+    locations[10*bank+ID+1] := [x, y]
 }
 
+; with numlock on, ctrl-shift-button to save,
+; ctrl-button to go to location
+^NumpadIns::SaveLocation(0)
+^Numpad0::MoveLocation(0)
 ^NumpadEnd::SaveLocation(1)
 ^Numpad1::MoveLocation(1)
 ^NumpadDown::SaveLocation(2)
@@ -122,17 +169,38 @@ SaveLocation(ID) {
 ^Numpad8::MoveLocation(8)
 ^NumpadPgUp::SaveLocation(9)
 ^Numpad9::MoveLocation(9)
-^NumpadIns::SaveLocation(10)
-^Numpad0::MoveLocation(10)
-^NumpadDel::SaveLocation(11)
-^NumpadDot::MoveLocation(11)
+;^NumpadDel::SaveLocation(11)
+;^NumpadDot::MoveLocation(11)
+
+; with numlock on, alt-button to switch bank,
+; alt-shift-button to run saved slot
+!NumpadIns::do_slot(0)
+!Numpad0::bank := 0
+!NumpadEnd::do_slot(1)
+!Numpad1::bank := 1
+!NumpadDown::do_slot(2)
+!Numpad2::bank := 2
+!NumpadPgDn::do_slot(3)
+!Numpad3::bank := 3
+!NumpadLeft::do_slot(4)
+!Numpad4::bank := 4
+!NumpadClear::do_slot(5)
+!Numpad5::bank := 5
+!NumpadRight::do_slot(6)
+!Numpad6::bank := 6
+!NumpadHome::do_slot(7)
+!Numpad7::bank := 7
+!NumpadUp::do_slot(8)
+!Numpad8::bank := 8
+!NumpadPgUp::do_slot(9)
+!Numpad9::bank := 9
 
 ; mousewheel version for basic mice
-~MButton & WheelUp::
-    Send {Esc}
-    MouseMove, x1, y
-    return
-~MButton & WheelDown::
-    Send {Esc}
-    MouseMove, x2, y
-    return
+; ~MButton & WheelUp::
+;     Send {Esc}
+;     MouseMove, x1, y
+;     return
+; ~MButton & WheelDown::
+;     Send {Esc}
+;     MouseMove, x2, y
+;     return
