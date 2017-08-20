@@ -92,13 +92,13 @@ do_slot(num) {
             MouseMove, locations[loc+1][1], locations[loc+1][2]
             Sleep, slots[num]["padding"] * 500
             if interrupted
-                break
+                return
             Click % slots[num]["buttons"][i]
             Sleep, slots[num]["padding"] * 500
         }
         if (A_index != slots[num]["numrepetitions"]) {
             if interrupted
-                break
+                return
             Sleep, slots[num]["delay"] * 1000
         }
     }
@@ -174,26 +174,27 @@ SaveLocation(ID) {
 
 ; with numlock on, alt-button to switch bank,
 ; alt-shift-button to run saved slot
+; using tilde (~) to avoid blocking entry of character alt-codes
 !NumpadIns::do_slot(0)
-!Numpad0::bank := 0
+~!Numpad0::bank := 0
 !NumpadEnd::do_slot(1)
-!Numpad1::bank := 1
+~!Numpad1::bank := 1
 !NumpadDown::do_slot(2)
-!Numpad2::bank := 2
+~!Numpad2::bank := 2
 !NumpadPgDn::do_slot(3)
-!Numpad3::bank := 3
+~!Numpad3::bank := 3
 !NumpadLeft::do_slot(4)
-!Numpad4::bank := 4
+~!Numpad4::bank := 4
 !NumpadClear::do_slot(5)
-!Numpad5::bank := 5
+~!Numpad5::bank := 5
 !NumpadRight::do_slot(6)
-!Numpad6::bank := 6
+~!Numpad6::bank := 6
 !NumpadHome::do_slot(7)
-!Numpad7::bank := 7
+~!Numpad7::bank := 7
 !NumpadUp::do_slot(8)
-!Numpad8::bank := 8
+~!Numpad8::bank := 8
 !NumpadPgUp::do_slot(9)
-!Numpad9::bank := 9
+~!Numpad9::bank := 9
 
 ; mousewheel version for basic mice
 ; ~MButton & WheelUp::
