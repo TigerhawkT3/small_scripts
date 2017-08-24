@@ -175,7 +175,7 @@ SaveLocation(ID) {
 ; with numlock on, alt-button to switch bank,
 ; alt-shift-button to run saved slot
 ; using tilde (~) to avoid blocking entry of character alt-codes
-!NumpadIns::do_slot(0)
+!NumpadIns::do_slot(10)
 ~!Numpad0::bank := 0
 !NumpadEnd::do_slot(1)
 ~!Numpad1::bank := 1
