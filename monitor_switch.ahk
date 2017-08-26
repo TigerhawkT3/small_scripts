@@ -20,9 +20,12 @@ count := false
 locations := []
 slots := []
 bank := 0
+filename := "locdata.ini"
 
 Loop 10
-    slots.Push({})
+    slots.Push({"range":[0], "padding":1
+                ,"numrepetitions":1, "delay":1
+                ,"buttons":["L"]})
 
 Loop 100
     locations.Push([0,0])
@@ -59,27 +62,74 @@ expand_sequence(range, seq) {
     return sequence
 }
 
+save() {
+    global locations
+    global slots
+    global filename
+    for idx, lst in locations
+        IniWrite, % lst[1] . "," . lst[2], %filename%, locations, %idx%
+    for idx, dct in slots
+        for k, v in dct {
+            if (v && (k=="range" || k=="buttons")) {
+                val := ""
+                for i,s in v
+                    val .= s . ","
+                v := RTrim(v, ",")
+            }
+            IniWrite, %v%, %filename%, % "slot" + idx, %k%
+        }
+}
+
+load() {
+    global locations
+    global slots
+    global filename
+    Loop 100 {
+        IniRead, val, %filename%, locations, %A_index%
+        locations[A_index] := StrSplit(val, ",")
+    }
+    Loop 10 {
+        IniRead, range, %filename%, % "slot" + A_index, range
+        IniRead, padding, %filename%, % "slot" + A_index, padding
+        IniRead, numrepetitions, %filename%, % "slot" + A_index, numrepetitions
+        IniRead, delay, %filename%, % "slot" + A_index, delay
+        IniRead, buttons, %filename%, % "slot" + A_index, buttons
+        slots[A_index]["padding"] := padding
+        slots[A_index]["numrepetitions"] := numrepetitions
+        slots[A_index]["delay"] := delay
+        slots[A_index]["range"] := StrSplit(range, ",")
+        slots[A_index]["buttons"] := StrSplit(buttons, ",")
+    }
+}
+
 ; save a setup of locations, padding, repetitions,
 ; delay, and button sequence in a chosen slot
 create_cycle() {
     global locations
     global slots
+    InputBox, slot, Save/load/cancel, Save this in slot 1-10`, cancel`, save data (SAVE)`, or load data (LOAD)?
+    if (slot == "SAVE") {
+        save()
+        return
+    }
+    if (slot == "LOAD") {
+        load()
+        return
+    }
+    if (slot < 1 || slot > 10)
+        return
     InputBox, range, Numbers?, Enter a range of locations e.g. "1`, 2`, 5-9`, 2"
     InputBox, padding, Padding time, How many seconds padding around clicks (decimal okay)?
     InputBox, numrepetitions, Repetitions, How many times?
     InputBox, delay, Delay, Pause how many seconds between cycles (decimal okay)?
     InputBox, buttons, Button sequence, Enter a mouse button sequence to repeat`, like "L R R". L=Left`, R=Right`, M=Middle`, X1=Button4`, X2=Button5.
-    InputBox, slot, Save slot, Save this in slot 1-10 or cancel (blank)?
-    if !slot
-        return
     range := parse_range(range)
     slots[slot] := {"range":range, "padding":padding
                     ,"numrepetitions":numrepetitions, "delay":delay
                     ,"buttons":expand_sequence(range, buttons)}
 }
 
-; uses MouseMove and then Click instead of just Click at the coords,
-; because MouseMove can handle expressions but Click can't
+; uses MouseMove and then Click instead of just Click to handle lag
 do_slot(num) {
     global interrupted
     global locations
