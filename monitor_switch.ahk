@@ -23,9 +23,9 @@ bank := 0
 filename := "locdata.ini"
 
 Loop 10
-    slots.Push({"range":[0], "padding":1
-                ,"numrepetitions":1, "delay":1
-                ,"buttons":["L"]})
+    slots.Push({"range":[], "padding":0
+                ,"numrepetitions":0, "delay":0
+                ,"buttons":[]})
 
 Loop 100
     locations.Push([0,0])
@@ -42,8 +42,12 @@ parse_range(s) {
         IfInString, var, - 
         {
             temp := StrSplit(var, "-")
-            Loop % temp[2]-temp[1] + 1
-                numbers.Push(A_index+temp[1]-1)
+            if (temp[2] > temp[1])
+                Loop % temp[2]-temp[1] + 1
+                    numbers.Push(A_index+temp[1]-1)
+            else
+                Loop % temp[1]-temp[2] + 1
+                    numbers.Push(temp[1]-A_index+1)
         }
         else
             numbers.Push(var)
@@ -70,11 +74,11 @@ save() {
         IniWrite, % lst[1] . "," . lst[2], %filename%, locations, %idx%
     for idx, dct in slots
         for k, v in dct {
-            if (v && (k=="range" || k=="buttons")) {
+            if (k=="range" || k=="buttons") {
                 val := ""
                 for i,s in v
                     val .= s . ","
-                v := RTrim(v, ",")
+                v := RTrim(val, ",")
             }
             IniWrite, %v%, %filename%, % "slot" + idx, %k%
         }
@@ -162,18 +166,16 @@ do_slot(num) {
 Pause::
     if count {
         MouseGetPos, tempx, tempy
-        if (Abs(tempx-rx2)<5 && Abs(tempy-ry2)<5) {
+        if (Abs(tempx-rx2)<5 && Abs(tempy-ry2)<5)
             return
-        }
         rx1 := tempx
         ry1 := tempy
         MouseMove, rx2, ry2
     }
     else {
         MouseGetPos, tempx, tempy
-        if (Abs(tempx-rx1)<5 && Abs(tempy-ry1)<5) {
+        if (Abs(tempx-rx1)<5 && Abs(tempy-ry1)<5)
             return
-        }
         rx2 := tempx
         ry2 := tempy
         MouseMove, rx1, ry1
