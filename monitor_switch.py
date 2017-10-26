@@ -10,12 +10,6 @@ start = offset//2
 x1 = start
 x2 = start + offset
 y = total_height//2
-rx1 = x1
-ry1 = y
-rx2 = x2
-ry1 = y
-count = False
-bank = 0
 filename = "locdata.txt"
 
 slots = [{"range":[0], "padding":1,
@@ -24,7 +18,8 @@ slots = [{"range":[0], "padding":1,
 
 locations = [[0,0] for _ in range(100)]
 
-data = {'locations':locations, 'slots':slots, 'interrupted':False}
+data = {'locations':locations, 'slots':slots, 'interrupted':False, 'count':False,
+        'rx1':x1, 'ry1':y, 'rx2':x2, 'ry1':y, 'bank':0}
 
 ahk.bind("<shift-pause>", ahk.mouse_move, x1, y)
 ahk.bind("<alt-pause>", ahk.mouse_move, x2, y)
@@ -97,17 +92,45 @@ def do_slot(num):
                 return
             ahk.sleep(data['slots'][num]['delay'] * 1000)
 
+    mydictionary[x] = y
     
-    
-    
-    
+def swap():
+    if count:
+        tempx,tempy = ahk.mousegetpos()
+        if abs(tempx-rx2)<5 and abs(tempy-ry2)<5:
+            return
+        data['rx1'] = tempx
+        data['ry1'] = tempy
+        ahk.mousemove(data['rx2'], data['ry2'])
+    else:
+        tempx,tempy = ahk.mousegetpos()
+        if abs(tempx-rx1)<5 and abs(tempy-ry1)<5:
+            return
+        data['rx2'] = tempx
+        data['ry2'] = tempy
+        ahk.mousemove(data['rx1'], data['ry1'])
+    count = not count
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
+ahk.bind("<alt-shift-pause>", create_cycle)
+ahk.bind("<alt-escape>", data.__setitem__, 'interrupted', True)
+ahk.bind("<pause>", swap)
+
+def movelocation(ID):
+    ahk.mousemove(*data['locations'][10*data['bank']+ID])
+
+def savelocation(ID):
+    data['locations'][10*bank+ID] = ahk.mousegetpos()
+}
+
+# with numlock on, ctrl-shift-button to save,
+# ctrl-button to go to location
+for i in range(10):
+    ahk.bind(f'ctrl-shift-numpad{i}', movelocation, i)
+    ahk.bind(f'ctrl-numpad{i}', savelocation, i)
+
+# with numlock on, alt-button to switch bank,
+# alt-shift-button to run saved slot
+# using tilde (~) to avoid blocking entry of character alt-codes
+for i in range(10):
+    ahk.bind(f'<alt-shift-numpad{i}', do_slot, i)
+    ahk.bind(f'<alt-numpad{i}', data.__setitem__, 'bank', i, passthrough=True)
