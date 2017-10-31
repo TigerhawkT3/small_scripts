@@ -68,17 +68,68 @@ class DQ:
             if val==item and start<=idx<stop:
                 return idx
         raise ValueError(f'{repr(item)} is not in deque between index {start} and {stop}')
+    def reverse(self):
+        self._iter, self._reviter = self._reviter, self._iter
+        self.pop, self.popleft = self.popleft, self.pop
+        self.appendleft, self.append = self.append, self.appendleft
+    def insert(self, i, element):
+        i = min(self.quantity, max(i, -self.quantity))
+        if i in (0, -self.quantity):
+            self.appendleft(element)
+            return
+        if i == self.quantity:
+            self.append(element)
+            return
+        if i < 0:
+            i += self.quantity
+        if i < self.quantity//2:
+            iterator = self._iter()
+        else:
+            iterator = self._reviter()
+            i = abs(i - self.quantity)
+        first = next(iterator)
+        n = Node()
+        for idx in range(i):
+            current, n = n, next(iterator)
+        temp = Node(element)
+        if current.next is current.prior is None:
+            node = first
+        else:
+            node = current
+        if node.next is n:
+            node.next = temp
+            temp.prior = node
+            temp.next = n
+            n.prior = temp
+        elif node.prior is n:
+            node.prior = temp
+            temp.next = node
+            temp.prior = n
+            n.next = temp
+    def remove(self):
+        pass
+    def rotate(self):
+        pass
     def __str__(self):
         return 'DQ({})'.format(', '.join(map(repr, self)))
     def __repr__(self):
         return repr(str(self))
-    def __iter__(self):
-        if not self.first:
-            return iter('')
+    def _iter(self):
         current = self.first
         while current:
-            yield current.element
+            yield current
             current = current.next
+    def __iter__(self):
+        for item in self._iter():
+            yield item.element
+    def _reviter(self):
+        current = self.last
+        while current:
+            yield current
+            current = current.prior
+    def __reversed__(self):
+        for item in self._reviter():
+            yield item.element
     def __len__(self):
         return self.quantity
     def __bool__(self):
@@ -96,40 +147,14 @@ class Node:
         return f'Node({repr(self.element)}, {self.prior and "..."}, {self.next and "..."})'
 
 if __name__ == '__main__':
+    for i in range(-10, 10):
+        d = DQ(*'abcdefg')
+        d.insert(i, 5)
+        print(i, d)
     d = DQ()
-    print(d.append(1))
-    print(d.append(2))
-    print(d.append(3))
-    print(d+d)
-    print(d.appendleft(4))
-    print(d.appendleft(5))
-    print(d.appendleft(6))
-    print(d.popleft())
-    print(d.pop())
-    print(d.append(7))
-    print(d.appendleft(8))
-    print(d.popleft())
-    print(d.popleft())
-    print(d.popleft())
-    print(d.popleft())
-    print(d.pop())
-    print(d.pop())
-    print(d.append(9))
-    print(d.appendleft(10))
-    print(d.popleft())
-    print(d.pop())
-    print(d.popleft())
-    print(d.append(11))
-    print(repr(d.last))
-    print(d.append(12))
-    print(repr(d.last))
-    d.clear()
-    d.extend([1, 2, 3])
-    d.extendleft([3, 4, 5, 6])
+    d.insert(-5, 0)
     print(d)
-    e = d.copy()
-    print(e)
-    print(d.count(3), d.count(1), d.count(0))
-    print(d.index(3))
-    print(d.index(3, 4))
-    print(d.index(0))
+    d.insert(-1, 1)
+    print(d)
+    d.insert(-1, 2)
+    print(d)
