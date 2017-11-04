@@ -15,7 +15,6 @@ class DQ:
         self.quantity += 1
         if self.maxlen and self.quantity > self.maxlen:
             self.popleft()
-        return self, item
     def pop(self):
         temp = self.last
         if not temp:
@@ -26,7 +25,7 @@ class DQ:
         self.quantity -= 1
         if not self:
             self.first = None
-        return self, temp.element
+        return temp.element
     def appendleft(self, item):
         temp = self.first
         if temp:
@@ -37,7 +36,6 @@ class DQ:
         self.quantity += 1
         if self.maxlen and self.quantity > self.maxlen:
             self.pop()
-        return self, item
     def popleft(self):
         temp = self.first
         if not temp:
@@ -48,7 +46,7 @@ class DQ:
         self.quantity -= 1
         if not self:
             self.last = None
-        return self, temp.element
+        return temp.element
     def clear(self):
         self.last = self.first = None
         self.quantity = 0
@@ -72,44 +70,94 @@ class DQ:
         self._iter, self._reviter = self._reviter, self._iter
         self.pop, self.popleft = self.popleft, self.pop
         self.appendleft, self.append = self.append, self.appendleft
-    def insert(self, i, element):
+    def _neighbors(self, i):
         i = min(self.quantity, max(i, -self.quantity))
-        if i in (0, -self.quantity):
-            self.appendleft(element)
-            return
-        if i == self.quantity:
-            self.append(element)
-            return
         if i < 0:
             i += self.quantity
+        if not i or i == self.quantity:
+            if not i:
+                it = self._iter()
+            else:
+                it = self._reviter()
+            try:
+                current = next(it)
+            except StopIteration:
+                current = n = None
+            else:
+                try:
+                    n = next(it)
+                except StopIteration:
+                    n = None
+            if not i:
+                return None, current, n
+            else:
+                return n, current, None
         if i < self.quantity//2:
             iterator = self._iter()
         else:
             iterator = self._reviter()
             i = abs(i - self.quantity)
-        first = next(iterator)
-        n = Node()
         for idx in range(i):
-            current, n = n, next(iterator)
-        temp = Node(element)
-        if current.next is current.prior is None:
-            node = first
+            current = next(iterator)
+        n = next(iterator)
+        before,after = [n, current][::-(current.next is n) or 1]
+        return before, current, after
+    def insert(self, i, element):
+        before, current, after = self._neighbors(i)
+        if not before:
+            self.appendleft(element)
+            return
+        if not after:
+            self.append(element)
+            return
+        e = Node(element)
+        e.prior, e.next = before, after
+        before.next = after.prior = e
+        self.quantity += 1
+    def remove(self, item):
+        for node in self._iter():
+            if node.element == item:
+                if node.prior:
+                    node.prior.next = node.next
+                else:
+                    self.first = node.next
+                if node.next:
+                    node.next.prior = node.prior
+                else:
+                    self.last = node.prior
+                self.quantity -= 1
+                return
+        raise ValueError(f'{repr(item)} not in deque')
+    def rotate(self, i):
+        if not self.quantity:
+            return
+        i %= self.quantity
+        if not i:
+            return
+        if i < self.quantity//2:
+            pop = self.pop
+            append = self.appendleft
         else:
-            node = current
-        if node.next is n:
-            node.next = temp
-            temp.prior = node
-            temp.next = n
-            n.prior = temp
-        elif node.prior is n:
-            node.prior = temp
-            temp.next = node
-            temp.prior = n
-            n.next = temp
-    def remove(self):
-        pass
-    def rotate(self):
-        pass
+            pop = self.popleft
+            append = self.append
+            i = self.quantity - i
+        for _ in range(i):
+            append(pop())
+    def rotate2(self, i):
+        # this doesn't work yet. don't use it.
+        if not self.quantity:
+            return
+        i = -(i%self.quantity)
+        if not i:
+            return
+        before, current, after = self._neighbors(i)
+        before.next = None
+        self.last.next = self.first
+        self.first.prior = self.last
+        self.first = current
+        current.prior = None
+        self.last = before
+        before.next = None
     def __str__(self):
         return 'DQ({})'.format(', '.join(map(repr, self)))
     def __repr__(self):
@@ -147,14 +195,7 @@ class Node:
         return f'Node({repr(self.element)}, {self.prior and "..."}, {self.next and "..."})'
 
 if __name__ == '__main__':
-    for i in range(-10, 10):
-        d = DQ(*'abcdefg')
-        d.insert(i, 5)
-        print(i, d)
-    d = DQ()
-    d.insert(-5, 0)
-    print(d)
-    d.insert(-1, 1)
-    print(d)
-    d.insert(-1, 2)
-    print(d)
+    d = DQ(*'abcde')
+    for i in [1, -1, 3, -3, 7, -7]:
+        d.rotate(i)
+        print(*d, sep='')
