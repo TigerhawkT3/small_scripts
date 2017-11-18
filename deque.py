@@ -89,8 +89,7 @@ class DQ:
             return None, None, None
         if i == self.quantity:
             it = self._reviter()
-            before = next(it)
-            return before, None, None
+            return next(it), None, None
         if self.quantity == 1:
             return None, self.first, None
         if not i:
@@ -112,6 +111,8 @@ class DQ:
             current, before = next(it), next(it)
         return before, current, after
     def insert(self, i, element):
+        if self.quantity == self.maxlen:
+            raise IndexError('deque already at its maximum size')
         node = Node(element)
         before, current, after = self._neighbors(i)
         if current is None:
@@ -145,30 +146,41 @@ class DQ:
         if not idx:
             return
         before,current,after = self._neighbors(idx)
+        self.last.next, self.first.prior = self.first, self.last
         if self.forward:
-            self.last.next, self.first.prior = self.first, self.last
             before.next = current.prior = None
             self.first, self.last = current, before
         else:
-            self.last.next, self.first.prior = self.first, self.last
             before.prior = current.next = None
             self.last, self.first = current, before
-    def remove(self, item, all=False):
-        for node in self._iter():
-            if node.element == item:
-                if node.prior:
-                    node.prior.next = node.next
+    def _remove_replace(self, choice, old, new, count):
+        if count < 0:
+            it = self._reviter()
+            count = abs(count)
+        else:
+            it = self._iter()
+        counter = 0
+        for node in it:
+            if (not count or counter < count) and node.element == old:
+                if choice == 'remove':
+                    if node.prior:
+                        node.prior.next = node.next
+                    else:
+                        self.first = node.next
+                    if node.next:
+                        node.next.prior = node.prior
+                    else:
+                        self.last = node.prior
+                    self.quantity -= 1
                 else:
-                    self.first = node.next
-                if node.next:
-                    node.next.prior = node.prior
-                else:
-                    self.last = node.prior
-                self.quantity -= 1
-                if not all:
-                    return
-        if not all:
-            raise ValueError(f'{repr(item)} not in deque')
+                    node.element = new
+                counter += 1
+        if not counter:
+            raise ValueError(f'{repr(old)} not in deque')
+    def remove(self, item, count=1):
+        self._remove_replace('remove', item, None, count)
+    def replace(self, old, new, count=1):
+        self._remove_replace('replace', old, new, count)
     def __str__(self):
         return 'DQ({})'.format(', '.join(map(repr, self)))
     def __repr__(self):
@@ -195,6 +207,11 @@ class DQ:
         return bool(self.quantity)
     def __add__(self, other):
         return DQ(*self, *other)
+    def __contains__(self, item):
+        for element in self:
+            if element == item:
+                return True
+        return False
 
 class Node:
     def __init__(self, element=None, *args):
@@ -222,3 +239,23 @@ if __name__ == '__main__':
         e.reverse()
         d.reverse()
         if tuple(d) != tuple(e): print(tuple(d) , tuple(e))
+    d.extend('1223564678231234')
+    for item in (('e', 'E'), ('2', '@'), ('2', '@', -1), ('3', '#', 0), ('4', '$', -1)):
+        #print(d)
+        d.replace(*item)
+    #print(d)
+    #d.replace(0, 0)
+    for i in 'Ee2634$':
+        print(i in d)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
