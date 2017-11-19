@@ -17,7 +17,7 @@ class DQ:
         else:
             self.first = self.last = Node(item)
         self.quantity += 1
-        if self.maxlen and self.quantity > self.maxlen:
+        if self.maxlen is not None and self.quantity > self.maxlen:
             self.popleft()
     def pop(self):
         temp = self.last
@@ -38,7 +38,7 @@ class DQ:
         else:
             self.first = self.last = Node(item)
         self.quantity += 1
-        if self.maxlen and self.quantity > self.maxlen:
+        if self.maxlen is not None and self.quantity > self.maxlen:
             self.pop()
     def popleft(self):
         temp = self.first
@@ -55,7 +55,7 @@ class DQ:
         self.last = self.first = None
         self.quantity = 0
     def copy(self):
-        return DQ(*self)
+        return DQ(*self, maxlen=self.maxlen)
     def count(self, item):
         return sum(item==element for element in self)
     def extend(self, other):
@@ -206,12 +206,35 @@ class DQ:
     def __bool__(self):
         return bool(self.quantity)
     def __add__(self, other):
-        return DQ(*self, *other)
+        return DQ(*self, *other, maxlen=self.maxlen)
+    def __iadd__(self, other):
+        if self is other:
+            other = other.copy()
+        self.extend(other)
+        return self
     def __contains__(self, item):
         for element in self:
             if element == item:
                 return True
         return False
+    def __mul__(self, other):
+        if not isinstance(other, int):
+            raise TypeError(f"can't multiply sequence by non-int of type {repr(type(other))}")
+        if other < 1:
+            return DQ(maxlen=self.maxlen)
+        temp = self.copy()
+        for _ in range(other - 1):
+            temp.extend(self)
+        return temp
+    def __imul__(self, other):
+        if not isinstance(other, int):
+            raise TypeError(f"can't multiply sequence by non-int of type {repr(type(other))}")
+        if other < 1:
+            self.clear()
+        temp = tuple(self)
+        for _ in range(other-1):
+            self.extend(temp)
+        return self
 
 class Node:
     def __init__(self, element=None, *args):
@@ -241,13 +264,13 @@ if __name__ == '__main__':
         if tuple(d) != tuple(e): print(tuple(d) , tuple(e))
     d.extend('1223564678231234')
     for item in (('e', 'E'), ('2', '@'), ('2', '@', -1), ('3', '#', 0), ('4', '$', -1)):
-        #print(d)
         d.replace(*item)
-    #print(d)
-    #d.replace(0, 0)
-    for i in 'Ee2634$':
-        print(i in d)
-    
+    print(d)
+    for ln in range(-1, 4):
+        print(d*ln)
+    print(d)
+    d += d
+    print(d)
     
     
     
