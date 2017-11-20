@@ -55,10 +55,12 @@ class DQ:
         self.last = self.first = None
         self.quantity = 0
     def copy(self):
-        return DQ(*self, maxlen=self.maxlen)
+        return type(self)(*self, maxlen=self.maxlen)
     def count(self, item):
         return sum(item==element for element in self)
     def extend(self, other):
+        if self is other:
+            other = tuple(other)
         for item in other:
             self.append(item)
     def extendleft(self, other):
@@ -110,6 +112,24 @@ class DQ:
                 after = next(it)
             current, before = next(it), next(it)
         return before, current, after
+    def __getitem__(self, i):
+        if not (isinstance(i, int) or isinstance(i, slice)):
+            raise TypeError(f'deque indices must be integers or int/None slices, not {repr(type(i))}')
+        if isinstance(i, int):
+            if not -self.quantity <= i < self.quantity:
+                raise IndexError(f'deque index {i} out of range {-self.quantity} to {self.quantity-1}')
+            return self._neighbors(i)[1].element
+        if isinstance(i, slice):
+            pass
+    def __setitem__(self, i, element):
+        if not (isinstance(i, int) or isinstance(i, slice)):
+            raise TypeError(f'deque indices must be integers or int/None slices, not {repr(type(i))}')
+        if isinstance(i, int):
+            if not -self.quantity <= i < self.quantity:
+                raise IndexError(f'deque assignment index {i} out of range {-self.quantity} to {self.quantity-1}')
+            self._neighbors(i)[1].element = element
+        if isinstance(i, slice):
+            pass
     def insert(self, i, element):
         if self.quantity == self.maxlen:
             raise IndexError('deque already at its maximum size')
@@ -206,10 +226,8 @@ class DQ:
     def __bool__(self):
         return bool(self.quantity)
     def __add__(self, other):
-        return DQ(*self, *other, maxlen=self.maxlen)
+        return type(self)(*self, *other, maxlen=self.maxlen)
     def __iadd__(self, other):
-        if self is other:
-            other = other.copy()
         self.extend(other)
         return self
     def __contains__(self, item):
@@ -221,7 +239,7 @@ class DQ:
         if not isinstance(other, int):
             raise TypeError(f"can't multiply sequence by non-int of type {repr(type(other))}")
         if other < 1:
-            return DQ(maxlen=self.maxlen)
+            return type(self)(maxlen=self.maxlen)
         temp = self.copy()
         for _ in range(other - 1):
             temp.extend(self)
@@ -235,6 +253,48 @@ class DQ:
         for _ in range(other-1):
             self.extend(temp)
         return self
+    def __lt__(self, other):
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        for a,b in zip(self, other):
+            if a < b:
+                return True
+            if a > b:
+                return False
+        return len(self) < len(other)
+    def __le__(self, other):
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        for a,b in zip(self, other):
+            if a < b:
+                return True
+            if a > b:
+                return False
+        return len(self) <= len(other)
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return all(a==b for a,b in zip(self,other)) and len(self)==len(other)
+    def __ne__(self, other):
+        return not (self == other)
+    def __gt__(self, other):
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        for a,b in zip(self, other):
+            if a > b:
+                return True
+            if a < b:
+                return False
+        return len(self) > len(other)
+    def __ge__(self, other):
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        for a,b in zip(self, other):
+            if a > b:
+                return True
+            if a < b:
+                return False
+        return len(self) >= len(other)
 
 class Node:
     def __init__(self, element=None, *args):
@@ -246,31 +306,13 @@ class Node:
         return f'Node({repr(self.element)}, {self.prior and "..."}, {self.next and "..."})'
 
 if __name__ == '__main__':
-    d = DQ(*'abcd')
-    e = collections.deque('abcd')
-    d.reverse()
-    e.reverse()
-    for i,ele in zip((0,0,20,3,-2,20,-20),('efghijk')):
-        d.reverse()
-        e.reverse()
-        d.insert(i, ele)
-        e.insert(i, ele)
-        if tuple(d) != tuple(e): print(tuple(d) , tuple(e))
-    for i in (0, 1, -1, 3, -3, 5, -5, 20, -20):
-        d.rotate(i)
-        e.rotate(i)
-        e.reverse()
-        d.reverse()
-        if tuple(d) != tuple(e): print(tuple(d) , tuple(e))
-    d.extend('1223564678231234')
-    for item in (('e', 'E'), ('2', '@'), ('2', '@', -1), ('3', '#', 0), ('4', '$', -1)):
-        d.replace(*item)
-    print(d)
-    for ln in range(-1, 4):
-        print(d*ln)
-    print(d)
-    d += d
-    print(d)
+    d = DQ(*'abcdefghijk')
+    e = collections.deque('abcdefghijk')
+    for i in range(-len(d), len(d)):
+        d[i], e[i] = e[i], d[i]
+        if tuple(d) != tuple(e):
+            print(i, d[i], e[i])
+    del d[0]
     
     
     
