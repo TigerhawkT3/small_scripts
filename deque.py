@@ -3,6 +3,11 @@ import timeit
 
 class DQ:
     def __init__(self, *items, maxlen=None):
+        if maxlen is not None:
+            if not isinstance(maxlen, int):
+                raise TypeError('an integer is required')
+            if maxlen<0:
+                raise ValueError('maxlen must be non-negative')
         self.maxlen = maxlen
         self.quantity = 0
         self.first = self.last = None
@@ -113,23 +118,59 @@ class DQ:
             current, before = next(it), next(it)
         return before, current, after
     def __getitem__(self, i):
-        if not (isinstance(i, int) or isinstance(i, slice)):
-            raise TypeError(f'deque indices must be integers or int/None slices, not {repr(type(i))}')
-        if isinstance(i, int):
-            if not -self.quantity <= i < self.quantity:
-                raise IndexError(f'deque index {i} out of range {-self.quantity} to {self.quantity-1}')
-            return self._neighbors(i)[1].element
-        if isinstance(i, slice):
-            pass
+        return self._getsetdel(i, None, 'get')
     def __setitem__(self, i, element):
+        self._getsetdel(i, element, 'set')
+    def __delitem__(self, i):
+        self._getsetdel(i, None, 'del')
+    def _getsetdel(self, i, element, choice):
         if not (isinstance(i, int) or isinstance(i, slice)):
             raise TypeError(f'deque indices must be integers or int/None slices, not {repr(type(i))}')
         if isinstance(i, int):
             if not -self.quantity <= i < self.quantity:
                 raise IndexError(f'deque assignment index {i} out of range {-self.quantity} to {self.quantity-1}')
-            self._neighbors(i)[1].element = element
+            before, current, after = self._neighbors(i)
+            if choice == 'get':
+                return current.element
+            elif choice == 'set':
+                current.element = element
+            elif choice == 'del':
+                if self.forward:
+                    if before:
+                        before.next = after
+                    else:
+                        self.first = after
+                    if after:
+                        after.prior = before
+                    else:
+                        self.last = before
+                else:
+                    if before:
+                        before.prior = after
+                    else:
+                        self.last = after
+                    if after:
+                        after.next = before
+                    else:
+                        self.first = before
+            else:
+                raise ValueError("choice must be 'get', 'set', or 'del'")
         if isinstance(i, slice):
-            pass
+            # incomplete
+            if not all(isinstance(part, int) or part is None for part in (i.start, i.stop, i.step)):
+                raise TypeError('slice indices must be integers or None (empty)')
+            start, stop, step = i.start, i.stop, i.step
+            step = step or 1
+            if step < 1:
+                start,stop = stop,start
+            if start is None:
+                pass
+            else:
+                start = self.norm_index(start, self.quantity)
+            if stop is None:
+                pass
+            else:
+                stop = self.norm_index(stop, self.quantity)
     def insert(self, i, element):
         if self.quantity == self.maxlen:
             raise IndexError('deque already at its maximum size')
@@ -312,8 +353,9 @@ if __name__ == '__main__':
         d[i], e[i] = e[i], d[i]
         if tuple(d) != tuple(e):
             print(i, d[i], e[i])
-    del d[0]
-    
+    print(d)
+    del d[4]
+    print(d)
     
     
     
