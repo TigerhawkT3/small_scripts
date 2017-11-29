@@ -2,7 +2,7 @@ import collections
 import timeit
 
 class DQ:
-    def __init__(self, *items, maxlen=None):
+    def __init__(self, items=(), maxlen=None):
         if maxlen is not None:
             if not isinstance(maxlen, int):
                 raise TypeError('an integer is required')
@@ -60,7 +60,7 @@ class DQ:
         self.last = self.first = None
         self.quantity = 0
     def copy(self):
-        return type(self)(*self, maxlen=self.maxlen)
+        return type(self)(self, maxlen=self.maxlen)
     def count(self, item):
         return sum(item==element for element in self)
     def extend(self, other):
@@ -124,6 +124,7 @@ class DQ:
     def __delitem__(self, i):
         self._getsetdel(i, None, 'del')
     def _getsetdel(self, i, element, choice):
+        # incomplete
         if not (isinstance(i, int) or isinstance(i, slice)):
             raise TypeError(f'deque indices must be integers or int/None slices, not {repr(type(i))}')
         if isinstance(i, int):
@@ -135,42 +136,60 @@ class DQ:
             elif choice == 'set':
                 current.element = element
             elif choice == 'del':
-                if self.forward:
-                    if before:
-                        before.next = after
-                    else:
-                        self.first = after
-                    if after:
-                        after.prior = before
-                    else:
-                        self.last = before
-                else:
-                    if before:
-                        before.prior = after
-                    else:
-                        self.last = after
-                    if after:
-                        after.next = before
-                    else:
-                        self.first = before
+                self._remove_node(current)
             else:
                 raise ValueError("choice must be 'get', 'set', or 'del'")
         if isinstance(i, slice):
-            # incomplete
-            if not all(isinstance(part, int) or part is None for part in (i.start, i.stop, i.step)):
+            if not all(isinstance(part, (int, type(None))) for part in (i.start, i.stop, i.step)):
                 raise TypeError('slice indices must be integers or None (empty)')
             start, stop, step = i.start, i.stop, i.step
-            step = step or 1
-            if step < 1:
-                start,stop = stop,start
+            if step == 0:
+                raise ValueError('slice step cannot be zero')
+            if step is None:
+                step = 1
             if start is None:
-                pass
-            else:
-                start = self.norm_index(start, self.quantity)
+                start = 0 if step>0 else self.quantity
             if stop is None:
-                pass
+                stop = self.quantity if step>0 else 0
+            start = self.norm_index(start, self.quantity)
+            stop = self.norm_index(stop, self.quantity)
+            if choice == 'get':
+                result = type(self)()
+            elif choice == 'set':
+                it = iter(element)
+            before, current, after = self._neighbors(start)
+            if step>0:
+                dq = self._iter(current)
             else:
-                stop = self.norm_index(stop, self.quantity)
+                dq = self._reviter(current)
+            if choice == 'get':
+                for node in dq:
+                    #print(start, stop, step)
+                    if (step>0 and start>=stop) or (step<0 and start<=stop):
+                        break
+                    start += step
+                    result.append(node.element)
+                    try:
+                        for _ in range(abs(step)-1):
+                            next(dq)
+                    except StopIteration:
+                        break
+                return result
+            elif choice == 'set':
+                pass
+            elif choice == 'del':
+                for node in dq:
+                    if (step>0 and start>=stop) or (step<0 and start<=stop):
+                        break
+                    start += step
+                    self._remove_node(node)
+                    try:
+                        for _ in range(abs(step-1)):
+                            next(dq)
+                    except StopIteration:
+                        break
+            else:
+                raise ValueError("choice must be 'get', 'set', or 'del'")
     def insert(self, i, element):
         if self.quantity == self.maxlen:
             raise IndexError('deque already at its maximum size')
@@ -214,6 +233,16 @@ class DQ:
         else:
             before.prior = current.next = None
             self.last, self.first = current, before
+    def _remove_node(self, node):
+        if node.prior:
+            node.prior.next = node.next
+        else:
+            self.first = node.next
+        if node.next:
+            node.next.prior = node.prior
+        else:
+            self.last = node.prior
+        self.quantity -= 1
     def _remove_replace(self, choice, old, new, count):
         if count < 0:
             it = self._reviter()
@@ -224,15 +253,7 @@ class DQ:
         for node in it:
             if (not count or counter < count) and node.element == old:
                 if choice == 'remove':
-                    if node.prior:
-                        node.prior.next = node.next
-                    else:
-                        self.first = node.next
-                    if node.next:
-                        node.next.prior = node.prior
-                    else:
-                        self.last = node.prior
-                    self.quantity -= 1
+                    self._remove_node(node)
                 else:
                     node.element = new
                 counter += 1
@@ -246,16 +267,18 @@ class DQ:
         return 'DQ({})'.format(', '.join(map(repr, self)))
     def __repr__(self):
         return repr(str(self))
-    def _iter(self):
-        current = self.first
+    def _iter(self, current=None):
+        if current is None:
+            current = self.first
         while current:
             yield current
             current = current.next
     def __iter__(self):
         for item in self._iter():
             yield item.element
-    def _reviter(self):
-        current = self.last
+    def _reviter(self, current=None):
+        if current is None:
+            current = self.last
         while current:
             yield current
             current = current.prior
@@ -267,7 +290,9 @@ class DQ:
     def __bool__(self):
         return bool(self.quantity)
     def __add__(self, other):
-        return type(self)(*self, *other, maxlen=self.maxlen)
+        result = self.copy()
+        result.extend(other)
+        return result
     def __iadd__(self, other):
         self.extend(other)
         return self
@@ -347,15 +372,28 @@ class Node:
         return f'Node({repr(self.element)}, {self.prior and "..."}, {self.next and "..."})'
 
 if __name__ == '__main__':
-    d = DQ(*'abcdefghijk')
-    e = collections.deque('abcdefghijk')
-    for i in range(-len(d), len(d)):
-        d[i], e[i] = e[i], d[i]
-        if tuple(d) != tuple(e):
-            print(i, d[i], e[i])
-    print(d)
-    del d[4]
-    print(d)
+    d = DQ('abcdefgh')
+    e = list('abcdefgh')
+    for a,b,c in [(None, len(d)-1, None),
+                  (1, len(d)-1, None),
+                  (1, None, None), 
+                  (None, -1, None), 
+                  (None, 0, -1), #
+                  (-2, 0, -1), #
+                  (len(d)-1, 0, -1),  #
+                  (None, None, 3),
+                  (0, None, -3) #
+                  ]:
+        
+        if list(d[a:b:c]) != e[a:b:c]:
+            print(a, b, c, d[a:b:c], e[a:b:c])
+        del d[a:b:c]
+        del e[a:b:c]
+        if list(d) != e:
+            print(a, b, c, d, e)
+        d = DQ('abcdefgh')
+        e = list('abcdefgh')
+    
     
     
     
