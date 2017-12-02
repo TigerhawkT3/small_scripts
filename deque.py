@@ -81,6 +81,7 @@ class DQ:
         self._iter, self._reviter = self._reviter, self._iter
         self.pop, self.popleft = self.popleft, self.pop
         self.appendleft, self.append = self.append, self.appendleft
+        self._insert_after, self._insert_before = self._insert_before, self._insert_after
         self.forward = not self.forward
     def distance_to_index(self, i, q):
         i = -(i%q)
@@ -123,6 +124,23 @@ class DQ:
         self._getsetdel(i, element, 'set')
     def __delitem__(self, i):
         self._getsetdel(i, None, 'del')
+    def _slice(self, s):
+        r = range(*s.indices(self.quantity))
+        idx = r.start
+        step = r.step
+        if idx not in r:
+            return
+        _, current, _ = self._neighbors(idx)
+        it = (self._iter if step>0 else self._reviter)(current)
+        current = next(it)
+        while idx in r:
+            yield current
+            for _ in range(abs(step)):
+                try:
+                    current = next(it)
+                except StopIteration:
+                    break
+            idx += step
     def _getsetdel(self, i, element, choice):
         # incomplete
         if not (isinstance(i, int) or isinstance(i, slice)):
@@ -140,54 +158,24 @@ class DQ:
             else:
                 raise ValueError("choice must be 'get', 'set', or 'del'")
         if isinstance(i, slice):
-            if not all(isinstance(part, (int, type(None))) for part in (i.start, i.stop, i.step)):
-                raise TypeError('slice indices must be integers or None (empty)')
-            start, stop, step = i.start, i.stop, i.step
-            if step == 0:
-                raise ValueError('slice step cannot be zero')
-            if step is None:
-                step = 1
-            if start is None:
-                start = 0 if step>0 else self.quantity
-            if stop is None:
-                stop = self.quantity if step>0 else 0
-            start = self.norm_index(start, self.quantity)
-            stop = self.norm_index(stop, self.quantity)
             if choice == 'get':
-                result = type(self)()
+                return type(self)(node.element for node in self._slice(i))
             elif choice == 'set':
-                it = iter(element)
-            before, current, after = self._neighbors(start)
-            if step>0:
-                dq = self._iter(current)
-            else:
-                dq = self._reviter(current)
-            if choice == 'get':
-                for node in dq:
-                    #print(start, stop, step)
-                    if (step>0 and start>=stop) or (step<0 and start<=stop):
-                        break
-                    start += step
-                    result.append(node.element)
-                    try:
-                        for _ in range(abs(step)-1):
-                            next(dq)
-                    except StopIteration:
-                        break
-                return result
-            elif choice == 'set':
-                pass
-            elif choice == 'del':
-                for node in dq:
-                    if (step>0 and start>=stop) or (step<0 and start<=stop):
-                        break
-                    start += step
+                slc = self._slice(i)
+                element = iter(element)
+                for node,value in zip(slc, element):
+                    node.element = value
+                step = i.indices(self.quantity)[2]
+                if step != 1:
+                    return
+                insert = self._insert_after if step>0 else self._insert_before
+                for node in slc:
                     self._remove_node(node)
-                    try:
-                        for _ in range(abs(step-1)):
-                            next(dq)
-                    except StopIteration:
-                        break
+                for value in element:
+                    node = insert(node, value)
+            elif choice == 'del':
+                for node in self._slice(i):
+                    self._remove_node(node)
             else:
                 raise ValueError("choice must be 'get', 'set', or 'del'")
     def insert(self, i, element):
@@ -243,6 +231,22 @@ class DQ:
         else:
             self.last = node.prior
         self.quantity -= 1
+    def _insert_after(self, node, value):
+        self.quantity += 1
+        n = Node(value) 
+        if node.next:
+            node.next = node.next.prior = n
+        else:
+            node.next = self.last = n
+        return n
+    def _insert_before(self, node, value):
+        self.quantity += 1
+        n = Node(value) 
+        if node.prior:
+            node.prior = node.prior.next = n
+        else:
+            node.prior = self.first = n
+        return n
     def _remove_replace(self, choice, old, new, count):
         if count < 0:
             it = self._reviter()
@@ -374,23 +378,27 @@ class Node:
 if __name__ == '__main__':
     d = DQ('abcdefgh')
     e = list('abcdefgh')
-    for a,b,c in [(None, len(d)-1, None),
-                  (1, len(d)-1, None),
+    for a,b,c in [(None, None, None),
+                  (1, None, None),
                   (1, None, None), 
-                  (None, -1, None), 
-                  (None, 0, -1), #
-                  (-2, 0, -1), #
-                  (len(d)-1, 0, -1),  #
-                  (None, None, 3),
-                  (0, None, -3) #
+                  (None, 11, None), 
+                  (None, -4, None), #
+                  (None, 0, 1), 
+                  (-2, 0, 1), 
+                  (None, 0, 1), 
+                  (None, None, 1),
+                  (0, None, 1) 
                   ]:
-        
-        if list(d[a:b:c]) != e[a:b:c]:
+        if (list(d[a:b:c]) != e[a:b:c]):
             print(a, b, c, d[a:b:c], e[a:b:c])
+        d[a:b:c] = range(15)[a:b:c]
+        e[a:b:c] = range(15)[a:b:c]
+        if (list(d) != e):
+            print('s', a,b,c,d,e)
         del d[a:b:c]
         del e[a:b:c]
-        if list(d) != e:
-            print(a, b, c, d, e)
+        if (list(d) != e):
+            print('d', a, b, c, d, e)
         d = DQ('abcdefgh')
         e = list('abcdefgh')
     
