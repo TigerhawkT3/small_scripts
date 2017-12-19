@@ -1,6 +1,3 @@
-import collections
-import timeit
-
 class DQ:
     def __init__(self, items=(), maxlen=None):
         if maxlen is not None:
@@ -142,7 +139,6 @@ class DQ:
                     break
             idx += step
     def _getsetdel(self, i, element, choice):
-        # incomplete
         if not (isinstance(i, int) or isinstance(i, slice)):
             raise TypeError(f'deque indices must be integers or int/None slices, not {repr(type(i))}')
         if isinstance(i, int):
@@ -161,18 +157,43 @@ class DQ:
             if choice == 'get':
                 return type(self)(node.element for node in self._slice(i))
             elif choice == 'set':
+                if not hasattr(element, '__len__'):
+                    element = tuple(element)
                 slc = self._slice(i)
-                element = iter(element)
-                for node,value in zip(slc, element):
-                    node.element = value
-                step = i.indices(self.quantity)[2]
+                elements = iter(element)
+                r = i.indices(self.quantity)
+                start = r[0]
+                step = r[2]
+                length = len(range(*r))
+                if step != 1 and length != len(element):
+                    raise ValueError('attempt to assign sequence of size '
+                                    f'{length} to extended slice of size {len(element)}')
+                if length >= len(element):
+                    for value,node in zip(elements, slc):
+                        node.element = value
+                else:
+                    for node,value in zip(slc, elements):
+                        node.element = value
                 if step != 1:
                     return
-                insert = self._insert_after if step>0 else self._insert_before
                 for node in slc:
                     self._remove_node(node)
-                for value in element:
-                    node = insert(node, value)
+                if length:
+                    for value in elements:
+                        node = self._insert_after(node, value)
+                elif self.quantity:
+                    before, node, _ = self._neighbors(r[0])
+                    if node:
+                        try:
+                            node = self._insert_before(node, next(elements))
+                        except StopIteration:
+                            pass
+                    else:
+                        node = before
+                    for value in elements:
+                        node = self._insert_after(node, value)
+                else:
+                    self.extend(elements)
             elif choice == 'del':
                 for node in self._slice(i):
                     self._remove_node(node)
@@ -233,19 +254,25 @@ class DQ:
         self.quantity -= 1
     def _insert_after(self, node, value):
         self.quantity += 1
-        n = Node(value) 
+        n = Node(value)
         if node.next:
-            node.next = node.next.prior = n
+            other = node.next
+            node.next = other.prior = n
+            n.prior, n.next = node, other
         else:
             node.next = self.last = n
+            n.prior = node
         return n
     def _insert_before(self, node, value):
         self.quantity += 1
-        n = Node(value) 
+        n = Node(value)
         if node.prior:
-            node.prior = node.prior.next = n
+            other = node.prior
+            node.prior = other.next = n
+            n.prior, n.next = other, node
         else:
             node.prior = self.first = n
+            n.next = node
         return n
     def _remove_replace(self, choice, old, new, count):
         if count < 0:
@@ -265,12 +292,12 @@ class DQ:
             raise ValueError(f'{repr(old)} not in deque')
     def remove(self, item, count=1):
         self._remove_replace('remove', item, None, count)
-    def replace(self, old, new, count=1):
+    def replace(self, old, new, count=0):
         self._remove_replace('replace', old, new, count)
     def __str__(self):
-        return 'DQ({})'.format(', '.join(map(repr, self)))
+        return 'DQ([{}])'.format(', '.join(map(repr, self)))
     def __repr__(self):
-        return repr(str(self))
+        return str(self)
     def _iter(self, current=None):
         if current is None:
             current = self.first
@@ -374,41 +401,3 @@ class Node:
         return str(self.element)
     def __repr__(self):
         return f'Node({repr(self.element)}, {self.prior and "..."}, {self.next and "..."})'
-
-if __name__ == '__main__':
-    d = DQ('abcdefgh')
-    e = list('abcdefgh')
-    for a,b,c in [(None, None, None),
-                  (1, None, None),
-                  (1, None, None), 
-                  (None, 11, None), 
-                  (None, -4, None), #
-                  (None, 0, 1), 
-                  (-2, 0, 1), 
-                  (None, 0, 1), 
-                  (None, None, 1),
-                  (0, None, 1) 
-                  ]:
-        if (list(d[a:b:c]) != e[a:b:c]):
-            print(a, b, c, d[a:b:c], e[a:b:c])
-        d[a:b:c] = range(15)[a:b:c]
-        e[a:b:c] = range(15)[a:b:c]
-        if (list(d) != e):
-            print('s', a,b,c,d,e)
-        del d[a:b:c]
-        del e[a:b:c]
-        if (list(d) != e):
-            print('d', a, b, c, d, e)
-        d = DQ('abcdefgh')
-        e = list('abcdefgh')
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
