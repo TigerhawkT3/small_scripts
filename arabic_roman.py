@@ -10,6 +10,6 @@ def a2r(i):
     return result or 'nulla'
 
 def r2a(s):
-    '''Takes a Roman numeral string nulla<=s<MMMCMXCIX and returns its integer value.'''
+    '''Takes a Roman numeral string nulla<=s<=MMMCMXCIX and returns its integer value.'''
     s, l = s.upper(), {'I':1, 'V':5, 'X':10, 'L':50, 'C':100, 'D':500, 'M':1000}
     return int(s!='NULLA') and sum((l[a], -l[a])[l[a]<l[b]] for a,b in zip(s, s[1:])) + l[s[-1]]
