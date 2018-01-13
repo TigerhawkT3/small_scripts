@@ -1,4 +1,12 @@
 class DQ:
+    '''
+    DQ([iterable[, maxlen]]) --> DQ object
+
+    A list-like sequence optimized for data accesses near its endpoints.
+    
+    A pure Python implementation of collections.deque,
+    with added features.
+    '''
     def __init__(self, items=(), maxlen=None):
         '''
         Create a new deque with the optional given iterable
@@ -628,11 +636,26 @@ class DQ:
         self.extend(other)
         return self
     def __contains__(self, item):
+        '''
+        Return whether item is in the deque.
+        Parameters:
+            item (object): item to search for
+        Returns:
+            result (bool): whether item in deque
+        '''
         for element in self:
             if element == item:
                 return True
         return False
     def __mul__(self, other):
+        '''
+        Returns a new deque consisting of the current deque's references
+        repeated other times.
+        Parameters:
+            other (int): number of times to repeat this deque
+        Returns:
+            deque (DQ): the resulting deque
+        '''
         if not isinstance(other, int):
             raise TypeError(f"can't multiply sequence by non-int of type {repr(type(other))}")
         if other < 1:
@@ -642,6 +665,13 @@ class DQ:
             temp.extend(self)
         return temp
     def __imul__(self, other):
+        '''
+        Expands the current deque to contain other repeats of its references.
+        Parameters:
+            other (int): number of times to repeat this deque
+        Returns:
+            deque (DQ): this deque
+        '''
         if not isinstance(other, int):
             raise TypeError(f"can't multiply sequence by non-int of type {repr(type(other))}")
         if other < 1:
@@ -650,6 +680,16 @@ class DQ:
         for _ in range(other-1):
             self.extend(temp)
         return self
+    def __rmul__(self, other):
+        '''
+        Returns a new deque consisting of the current deque's references
+        repeated other times. For reflected operands.
+        Parameters:
+            other (int): number of times to repeat this deque
+        Returns:
+            deque (DQ): the resulting deque
+        '''
+        return self*other
     def __lt__(self, other):
         if not isinstance(other, type(self)):
             return NotImplemented
@@ -694,7 +734,19 @@ class DQ:
         return len(self) >= len(other)
 
 class Node:
+    '''
+    Node([element]) --> Node object
+    
+    A singleton container for objects in a deque.
+    '''
     def __init__(self, element=None, *args):
+        '''
+        Initialize a new Node with an optional given element.
+        Parameters:
+            element (object): the element this Node should contain
+        Returns:
+            None (initializes)
+        '''
         self.next = self.prior = None
         self.element = element
     def __str__(self):
