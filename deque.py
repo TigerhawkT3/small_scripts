@@ -1,3 +1,5 @@
+import multiprocessing as mp
+
 class DQ:
     '''
     DQ([iterable[, maxlen]]) --> DQ object
@@ -17,6 +19,7 @@ class DQ:
         Returns:
             deque (DQ): a double-ended queue container
         '''
+        self.p = self.concatenate = self.concat = self.c = self.plus
         if maxlen is not None:
             if not isinstance(maxlen, int):
                 raise TypeError('an integer is required')
@@ -24,6 +27,7 @@ class DQ:
                 raise ValueError('maxlen must be non-negative')
         self.maxlen = maxlen
         self.quantity = 0
+        self.invoke_mp = 150
         self.first = self.last = None
         self.forward = True
         for item in items:
@@ -614,24 +618,13 @@ class DQ:
             result (bool): truthiness of the deque
         '''
         return bool(self.quantity)
-    def __add__(self, other):
+    def plus(self, other):
         '''
-        Concatenate this deque and another iterable other into a new deque, then return it.
+        Concatenate an iterable onto this deque, then return it.
         Parameters:
             other (iterable): the iterable to add to this deque
         Returns:
-            deque (DQ): the concatenated deque
-        '''
-        result = self.copy()
-        result.extend(other)
-        return result
-    def __iadd__(self, other):
-        '''
-        Concatenate this deque and another iterable other into a new deque, in place.
-        Parameters:
-            other (iterable): the iterable to add to this deque
-        Returns:
-            None
+            deque (DQ): this deque
         '''
         self.extend(other)
         return self
@@ -647,49 +640,406 @@ class DQ:
             if element == item:
                 return True
         return False
+    def __matmul__(self, other):
+        '''
+        Returns the result of a matrix multiplication of self by other.
+        Row vectors and column vectors are promoted to 2D matrices,
+        and their result is demoted back down after calculation.
+        In A@B, with A being m height * n width, B must be n
+        height * p width. Multiprocessing is invoked only when
+        max(m,n,p) >= deque.invoke_mp to avoid large setup overhead.
+        The default value of deque.invoke_mp is 150, the break-even
+        point for square matrices of small integers.
+        Parameters:
+            other (iterable): vector or matrix to multiply
+        Returns:
+            result (DQ, int): a 2D deque matrix, 1D deque, or
+                              integer scalar
+        '''
+        try:
+            n1 = len(self[0])
+        except TypeError:
+            self = type(self)([self])
+            n1 = len(self[0])
+            coerced_self = True
+        else:
+            coerced_self = False
+        m = len(self)
+        n2 = len(other)
+        if n1 != n2:
+            raise ValueError(f'Width of left operand must match height of right operand (currently {n1} and {n2}).')
+        try:
+            p = len(other[0])
+        except TypeError:
+            other = tuple([i] for i in other)
+            p = len(other[0])
+            coerced_other = True
+        else:
+            coerced_other = False
+        m,n1,n2,p = len(self), len(self[0]), len(other), len(other[0])
+        n = n1
+        if max(m,n,p) < self.invoke_mp:
+            result = type(self)(type(self)(sum(a*b for a,b in zip(row,col)) for col in zip(*other)) for row in self)
+        else:
+            self.other = other
+            size = n//mp.cpu_count()
+            with mp.Pool() as p:
+                result = type(self)(p.imap(self.findrow, self, size))
+            del self.other
+        if coerced_self and not coerced_other:
+            return result[0]
+        elif not coerced_self and coerced_other:
+            return type(self)(i[0] for i in result)
+        elif coerced_self and coerced_other:
+            return result[0][0]
+        else:
+            return result
+    def findrow(self, row):
+        '''
+        Returns the matrix multiplication result of A*B for a
+        single row of A. Matrix B is stored in deque.other.
+        Parameters:
+            row (iterable): a single row of matrix A
+        Returns:
+            deque (DQ): a deque of this row's matrix multiplication
+                        result with deque.other
+        '''
+        return type(self)(sum(a*b for a,b in zip(row,col)) for col in zip(*self.other))
+    def __rmatmul__(self, other):
+        '''
+        Returns the result of a matrix multiplication of self by other.
+        For reflected operands. See deque.__matmul__ for details.
+        Parameters:
+            other (iterable): vector or matrix to multiply
+        Returns:
+            result (DQ, int): a 2D deque matrix, 1D deque, or
+                              integer scalar
+        '''
+        return type(self).__matmul__(other, self)
+    def __imatmul__(self, other):
+        '''
+        Implement self@=other. Syntactic sugar for deque = deque @ other.
+        The old reference for this deque is discarded without any
+        attempt to modify this deque in place, as the result
+        might have different dimensions, shape, or even type.
+        Parameters:
+            other (iterable): vector or matrix to multiply
+        Returns:
+            result (DQ, int): a 2D deque matrix, 1D deque, or
+                              integer scalar
+        '''
+        return self@other
+    def __add__(self, other):
+        '''
+        Return the result of elementwise evaluation with
+        the + operator.
+        Parameters:
+            other (iterable): the other iterable to operate on
+        Returns:
+            deque (DQ): (a, b) + (c, d, e) -> (a+c, b+d)
+        '''
+        return type(self)(a+b for a,b in zip(self, other))
+    def __radd__(self, other):
+        '''
+        Reflected operator version of deque.__add__.
+        '''
+        return type(self)(a+b for a,b in zip(other, self))
+    def __iadd__(self, other):
+        '''
+        Augmented assignment version (in-place modification) of deque.__add__.
+        '''
+        for node,value in zip(self._iter(), other):
+            node.element += value
+    def __sub__(self, other):
+        '''
+        Return the result of elementwise evaluation with
+        the - operator.
+        Parameters:
+            other (iterable): the other iterable to operate on
+        Returns:
+            deque (DQ): (a, b) - (c, d, e) -> (a-c, b-d)
+        '''
+        return type(self)(a-b for a,b in zip(self, other))
+    def __rsub__(self, other):
+        '''
+        Reflected operator version of deque.__sub__.
+        '''
+        return type(self)(a-b for a,b in zip(other, self))
+    def __isub__(self, other):
+        '''
+        Augmented assignment version (in-place modification) of deque.__sub__.
+        '''
+        for node,value in zip(self._iter(), other):
+            node.element -= value
     def __mul__(self, other):
         '''
         Returns a new deque consisting of the current deque's references
-        repeated other times.
+        repeated other times, or a new deque of the elementwise
+        multiplication of this deque and iterable other.
         Parameters:
-            other (int): number of times to repeat this deque
+            other (int, iterable): number of times to repeat this deque,
+                                   or iterable for elementwise multiplication
         Returns:
             deque (DQ): the resulting deque
         '''
-        if not isinstance(other, int):
-            raise TypeError(f"can't multiply sequence by non-int of type {repr(type(other))}")
-        if other < 1:
-            return type(self)(maxlen=self.maxlen)
-        temp = self.copy()
-        for _ in range(other - 1):
-            temp.extend(self)
-        return temp
-    def __imul__(self, other):
-        '''
-        Expands the current deque to contain other repeats of its references.
-        Parameters:
-            other (int): number of times to repeat this deque
-        Returns:
-            deque (DQ): this deque
-        '''
-        if not isinstance(other, int):
-            raise TypeError(f"can't multiply sequence by non-int of type {repr(type(other))}")
-        if other < 1:
-            self.clear()
-        temp = tuple(self)
-        for _ in range(other-1):
-            self.extend(temp)
-        return self
+        if isinstance(other, int):
+            if other < 1:
+                return type(self)(maxlen=self.maxlen)
+            temp = self.copy()
+            for _ in range(other - 1):
+                temp.extend(self)
+            return temp
+        try:
+            return type(self)(a*b for a,b in zip(self, other))
+        except TypeError:
+            pass
+        raise TypeError(f"can't multiply sequence by non-(int/iterable) of type {repr(type(other))}")
     def __rmul__(self, other):
         '''
         Returns a new deque consisting of the current deque's references
-        repeated other times. For reflected operands.
+        repeated other times, or a new deque of the elementwise
+        multiplication of this deque and iterable other. For reflected operands.
         Parameters:
-            other (int): number of times to repeat this deque
+            other (int, iterable): number of times to repeat this deque,
+                                   or iterable for elementwise multiplication
         Returns:
             deque (DQ): the resulting deque
         '''
-        return self*other
+        if isinstance(other, int):
+            return self*other
+        try:
+            return type(self)(a*b for a,b in zip(other, self))
+        except TypeError:
+            pass
+        raise TypeError(f"can't multiply sequence by non-(int/iterable) of type {repr(type(other))}")
+    def __imul__(self, other):
+        '''
+        Expands the current deque to contain other repeats of its references,
+        or update this deque's elements to the elementwise multiplication
+        of this deque and iterable other.
+        Parameters:
+            other (int, iterable): number of times to repeat this deque,
+                                   or iterable for elementwise multiplication
+        Returns:
+            deque (DQ): this deque
+        '''
+        if isinstance(other, int):
+            if other < 1:
+                self.clear()
+            temp = tuple(self)
+            for _ in range(other-1):
+                self.extend(temp)
+            return self
+        try:
+            for node,value in zip(self._iter(), other):
+                node.element *= value
+        except TypeError:
+            pass
+        raise TypeError(f"can't multiply sequence by non-(int/iterable) of type {repr(type(other))}")
+    def __truediv__(self, other):
+        '''
+        Return the result of elementwise evaluation with
+        the / operator.
+        Parameters:
+            other (iterable): the other iterable to operate on
+        Returns:
+            deque (DQ): (a, b) / (c, d, e) -> (a/c, b/d)
+        '''
+        return type(self)(a/b for a,b in zip(self, other))
+    def __rtruediv__(self, other):
+        '''
+        Reflected operator version of deque.__truediv__.
+        '''
+        return type(self)(a/b for a,b in zip(other, self))
+    def __itruediv__(self, other):
+        '''
+        Augmented assignment version (in-place modification) of deque.__truediv__.
+        '''
+        for node,value in zip(self._iter(), other):
+            node.element /= value
+    def __floordiv__(self, other):
+        '''
+        Return the result of elementwise evaluation with
+        the // operator.
+        Parameters:
+            other (iterable): the other iterable to operate on
+        Returns:
+            deque (DQ): (a, b) // (c, d, e) -> (a//c, b//d)
+        '''
+        return type(self)(a//b for a,b in zip(self, other))
+    def __rfloordiv__(self, other):
+        '''
+        Reflected operator version of deque.__floordiv__.
+        '''
+        return type(self)(a//b for a,b in zip(other, self))
+    def __ifloordiv__(self, other):
+        '''
+        Augmented assignment version (in-place modification) of deque.__floordiv__.
+        '''
+        for node,value in zip(self._iter(), other):
+            node.element //= value
+    def __mod__(self, other):
+        '''
+        Return the result of elementwise evaluation with
+        the % operator.
+        Parameters:
+            other (iterable): the other iterable to operate on
+        Returns:
+            deque (DQ): (a, b) % (c, d, e) -> (a%c, b%d)
+        '''
+        return type(self)(a%b for a,b in zip(self, other))
+    def __rmod__(self, other):
+        '''
+        Reflected operator version of deque.__mod__.
+        '''
+        return type(self)(a%b for a,b in zip(other, self))
+    def __imod__(self, other):
+        '''
+        Augmented assignment version (in-place modification) of deque.__mod__.
+        '''
+        for node,value in zip(self._iter(), other):
+            node.element %= value
+    def __divmod__(self, other):
+        '''
+        Return the result of elementwise evaluation with
+        the divmod function. Equivalent to DQ(map(divmod, deque, other)).
+        Parameters:
+            other (iterable): the other iterable to operate on
+        Returns:
+            deque (DQ): divmod((a, b), (c, d, e)) -> (divmod(a,c), divmod(b,d))
+        '''
+        return type(self)(map(divmod, self, other))
+    def __rdivmod__(self, other):
+        '''
+        Reflected operator version of deque.__divmod__.
+        '''
+        return type(self)(map(divmod, other, self))
+    def __pow__(self, other):
+        '''
+        Return the result of elementwise evaluation with
+        the ** operator.
+        Parameters:
+            other (iterable): the other iterable to operate on
+        Returns:
+            deque (DQ): (a, b) ** (c, d, e) -> (a**c, b**d)
+        '''
+        return type(self)(a**b for a,b in zip(self, other))
+    def __rpow__(self, other):
+        '''
+        Reflected operator version of deque.__pow__.
+        '''
+        return type(self)(a**b for a,b in zip(other, self))
+    def __ipow__(self, other):
+        '''
+        Augmented assignment version (in-place modification) of deque.__pow__.
+        '''
+        for node,value in zip(self._iter(), other):
+            node.element **= value
+    def __lshift__(self, other):
+        '''
+        Return the result of elementwise evaluation with
+        the << operator.
+        Parameters:
+            other (iterable): the other iterable to operate on
+        Returns:
+            deque (DQ): (a, b) << (c, d, e) -> (a<<c, b<<d)
+        '''
+        return type(self)(a<<b for a,b in zip(self, other))
+    def __rlshift__(self, other):
+        '''
+        Reflected operator version of deque.__lshift__.
+        '''
+        return type(self)(a<<b for a,b in zip(other, self))
+    def __ilshift__(self, other):
+        '''
+        Augmented assignment version (in-place modification) of deque.__lshift__.
+        '''
+        for node,value in zip(self._iter(), other):
+            node.element <<= value
+    def __rshift__(self, other):
+        '''
+        Return the result of elementwise evaluation with
+        the >> operator.
+        Parameters:
+            other (iterable): the other iterable to operate on
+        Returns:
+            deque (DQ): (a, b) >> (c, d, e) -> (a>>c, b>>d)
+        '''
+        return type(self)(a>>b for a,b in zip(self, other))
+    def __rrshift__(self, other):
+        '''
+        Reflected operator version of deque.__rshift__.
+        '''
+        return type(self)(a>>b for a,b in zip(other, self))
+    def __irshift__(self, other):
+        '''
+        Augmented assignment version (in-place modification) of deque.__rshift__.
+        '''
+        for node,value in zip(self._iter(), other):
+            node.element >>= value
+    def __and__(self, other):
+        '''
+        Return the result of elementwise evaluation with
+        the & operator.
+        Parameters:
+            other (iterable): the other iterable to operate on
+        Returns:
+            deque (DQ): (a, b) & (c, d, e) -> (a&c, b&d)
+        '''
+        return type(self)(a&b for a,b in zip(self, other))
+    def __rand__(self, other):
+        '''
+        Reflected operator version of deque.__and__.
+        '''
+        return type(self)(a&b for a,b in zip(other, self))
+    def __iand__(self, other):
+        '''
+        Augmented assignment version (in-place modification) of deque.__and__.
+        '''
+        for node,value in zip(self._iter(), other):
+            node.element &= value
+    def __xor__(self, other):
+        '''
+        Return the result of elementwise evaluation with
+        the ^ operator.
+        Parameters:
+            other (iterable): the other iterable to operate on
+        Returns:
+            deque (DQ): (a, b) ^ (c, d, e) -> (a^c, b^d)
+        '''
+        return type(self)(a^b for a,b in zip(self, other))
+    def __rxor__(self, other):
+        '''
+        Reflected operator version of deque.__xor__.
+        '''
+        return type(self)(a^b for a,b in zip(other, self))
+    def __ixor__(self, other):
+        '''
+        Augmented assignment version (in-place modification) of deque.__xor__.
+        '''
+        for node,value in zip(self._iter(), other):
+            node.element ^= value
+    def __or__(self, other):
+        '''
+        Return the result of elementwise evaluation with
+        the | operator.
+        Parameters:
+            other (iterable): the other iterable to operate on
+        Returns:
+            deque (DQ): (a, b) | (c, d, e) -> (a|c, b|d)
+        '''
+        return type(self)(a|b for a,b in zip(self, other))
+    def __ror__(self, other):
+        '''
+        Reflected operator version of deque.__or__.
+        '''
+        return type(self)(a|b for a,b in zip(other, self))
+    def __ior__(self, other):
+        '''
+        Augmented assignment version (in-place modification) of deque.__or__.
+        '''
+        for node,value in zip(self._iter(), other):
+            node.element |= value
     def __lt__(self, other):
         if not isinstance(other, type(self)):
             return NotImplemented
@@ -753,3 +1103,55 @@ class Node:
         return str(self.element)
     def __repr__(self):
         return f'Node({repr(self.element)}, {self.prior and "..."}, {self.next and "..."})'
+        
+if __name__ == '__main__':
+    import time
+    a = DQ(tuple(range(20)) for _ in range(20))
+    b = DQ(tuple(range(20)) for _ in range(20))
+    t = time.perf_counter()
+    a@b
+    print(time.perf_counter()-t)
+    a.invoke_mp = b.invoke_mp = 20
+    t = time.perf_counter()
+    a@b
+    print(time.perf_counter()-t)
+    a = DQ(tuple(range(50)) for _ in range(50))
+    b = DQ(tuple(range(50)) for _ in range(50))
+    a.invoke_mp = b.invoke_mp = 51
+    t = time.perf_counter()
+    a@b
+    print(time.perf_counter()-t)
+    a.invoke_mp = b.invoke_mp = 50
+    t = time.perf_counter()
+    a@b
+    print(time.perf_counter()-t)
+    a = DQ(tuple(range(100)) for _ in range(100))
+    b = DQ(tuple(range(100)) for _ in range(100))
+    a.invoke_mp = b.invoke_mp = 101
+    t = time.perf_counter()
+    a@b
+    print(time.perf_counter()-t)
+    a.invoke_mp = b.invoke_mp = 100
+    t = time.perf_counter()
+    a@b
+    print(time.perf_counter()-t)
+    a = DQ(tuple(range(150)) for _ in range(150))
+    b = DQ(tuple(range(150)) for _ in range(150))
+    a.invoke_mp = b.invoke_mp = 151
+    t = time.perf_counter()
+    a@b
+    print(time.perf_counter()-t)
+    a.invoke_mp = b.invoke_mp = 150
+    t = time.perf_counter()
+    a@b
+    print(time.perf_counter()-t)
+    a = DQ(tuple(range(200)) for _ in range(200))
+    b = DQ(tuple(range(200)) for _ in range(200))
+    a.invoke_mp = b.invoke_mp = 201
+    t = time.perf_counter()
+    a@b
+    print(time.perf_counter()-t)
+    a.invoke_mp = b.invoke_mp = 200
+    t = time.perf_counter()
+    a@b
+    print(time.perf_counter()-t)
