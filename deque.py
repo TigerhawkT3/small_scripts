@@ -19,7 +19,7 @@ class DQ:
         Returns:
             deque (DQ): a double-ended queue container
         '''
-        self.p = self.concatenate = self.concat = self.c = self.plus
+        self.plus = self.p = self.concatenate = self.concat = self.c = self.__call__
         if maxlen is not None:
             if not isinstance(maxlen, int):
                 raise TypeError('an integer is required')
@@ -618,15 +618,24 @@ class DQ:
             result (bool): truthiness of the deque
         '''
         return bool(self.quantity)
-    def plus(self, other):
+    def __call__(self, *args):
         '''
         Concatenate an iterable onto this deque, then return it.
         Parameters:
             other (iterable): the iterable to add to this deque
         Returns:
             deque (DQ): this deque
+        Examples:
+            a = DQ('123')
+            b = DQ('456')
+            c = DQ('789')
+            DQ()(a, b, c) # new deque 123456789
+            DQ()(a)(b)(c) # new deque 123456789
+            a(b)(c) # a is now 123456789
+            a(b(c)) # a is now 123456789, b is now 456789
         '''
-        self.extend(other)
+        for other in args:
+            self.extend(other)
         return self
     def __contains__(self, item):
         '''
@@ -1103,55 +1112,3 @@ class Node:
         return str(self.element)
     def __repr__(self):
         return f'Node({repr(self.element)}, {self.prior and "..."}, {self.next and "..."})'
-        
-if __name__ == '__main__':
-    import time
-    a = DQ(tuple(range(20)) for _ in range(20))
-    b = DQ(tuple(range(20)) for _ in range(20))
-    t = time.perf_counter()
-    a@b
-    print(time.perf_counter()-t)
-    a.invoke_mp = b.invoke_mp = 20
-    t = time.perf_counter()
-    a@b
-    print(time.perf_counter()-t)
-    a = DQ(tuple(range(50)) for _ in range(50))
-    b = DQ(tuple(range(50)) for _ in range(50))
-    a.invoke_mp = b.invoke_mp = 51
-    t = time.perf_counter()
-    a@b
-    print(time.perf_counter()-t)
-    a.invoke_mp = b.invoke_mp = 50
-    t = time.perf_counter()
-    a@b
-    print(time.perf_counter()-t)
-    a = DQ(tuple(range(100)) for _ in range(100))
-    b = DQ(tuple(range(100)) for _ in range(100))
-    a.invoke_mp = b.invoke_mp = 101
-    t = time.perf_counter()
-    a@b
-    print(time.perf_counter()-t)
-    a.invoke_mp = b.invoke_mp = 100
-    t = time.perf_counter()
-    a@b
-    print(time.perf_counter()-t)
-    a = DQ(tuple(range(150)) for _ in range(150))
-    b = DQ(tuple(range(150)) for _ in range(150))
-    a.invoke_mp = b.invoke_mp = 151
-    t = time.perf_counter()
-    a@b
-    print(time.perf_counter()-t)
-    a.invoke_mp = b.invoke_mp = 150
-    t = time.perf_counter()
-    a@b
-    print(time.perf_counter()-t)
-    a = DQ(tuple(range(200)) for _ in range(200))
-    b = DQ(tuple(range(200)) for _ in range(200))
-    a.invoke_mp = b.invoke_mp = 201
-    t = time.perf_counter()
-    a@b
-    print(time.perf_counter()-t)
-    a.invoke_mp = b.invoke_mp = 200
-    t = time.perf_counter()
-    a@b
-    print(time.perf_counter()-t)
