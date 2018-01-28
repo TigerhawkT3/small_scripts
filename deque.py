@@ -1111,5 +1111,5 @@ class Node:
     def __str__(self):
         return 'Node(...)' if self is self.element else str(self.element)
     def __repr__(self):
-        return (f'Node({repr("Node(...)" if self is self.element else self.element)}, '
+        return (f'Node({"Node(...)" if self is self.element else repr(self.element)}, '
                 f'{self.prior and "..."}, {self.next and "..."})')
