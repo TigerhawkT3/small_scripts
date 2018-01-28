@@ -550,7 +550,7 @@ class DQ:
         Returns:
             result (str): the deque as a string
         '''
-        return 'DQ([{}])'.format(', '.join(map(repr, self)))
+        return 'DQ([{}])'.format(', '.join('DQ([...])' if item is self else repr(item) for item in self))
     def __repr__(self):
         '''
         Returns the string representation of the deque.
@@ -1109,6 +1109,7 @@ class Node:
         self.next = self.prior = None
         self.element = element
     def __str__(self):
-        return str(self.element)
+        return 'Node(...)' if self is self.element else str(self.element)
     def __repr__(self):
-        return f'Node({repr(self.element)}, {self.prior and "..."}, {self.next and "..."})'
+        return (f'Node({repr("Node(...)" if self is self.element else self.element)}, '
+                f'{self.prior and "..."}, {self.next and "..."})')
