@@ -9,6 +9,7 @@ class DQ:
     A pure Python implementation of collections.deque,
     with added features.
     '''
+    seen = set()
     def __init__(self, items=(), maxlen=None):
         '''
         Create a new deque with the optional given iterable
@@ -543,22 +544,29 @@ class DQ:
             None
         '''
         self._remove_replace('replace', old, new, count)
-    def __str__(self):
+    def __str__(self, parent=True):
         '''
         Returns the string representation of the deque.
         Can be evaluated with eval back into an equivalent deque.
         Returns:
             result (str): the deque as a string
         '''
-        return 'DQ([{}])'.format(', '.join('DQ([...])' if item is self else repr(item) for item in self))
-    def __repr__(self):
+        if parent:
+            self.__class__.seen.add(id(self))
+        result = 'DQ([{}])'.format(', '.join('DQ([...])' if 
+        isinstance(item, type(self)) and (id(item) in self.__class__.seen or self.__class__.seen.add(id(item))) else
+        item.__repr__(False) if isinstance(item, type(self)) else repr(item) for item in self))
+        if parent:
+            self.__class__.seen.clear()
+        return result
+    def __repr__(self, parent=True):
         '''
         Returns the string representation of the deque.
         Can be evaluated with eval back into an equivalent deque.
         Returns:
             result (str): the deque as a string
         '''
-        return str(self)
+        return self.__str__(parent)
     def _iter(self, current=None):
         '''
         Yields a Node for each item in the deque, from beginning (left) to end (right).
@@ -759,6 +767,7 @@ class DQ:
         '''
         for node,value in zip(self._iter(), other):
             node.element += value
+        return self
     def __sub__(self, other):
         '''
         Return the result of elementwise evaluation with
@@ -780,6 +789,7 @@ class DQ:
         '''
         for node,value in zip(self._iter(), other):
             node.element -= value
+        return self
     def __mul__(self, other):
         '''
         Returns a new deque consisting of the current deque's references
@@ -842,6 +852,7 @@ class DQ:
         try:
             for node,value in zip(self._iter(), other):
                 node.element *= value
+            return self
         except TypeError:
             pass
         raise TypeError(f"can't multiply sequence by non-(int/iterable) of type {repr(type(other))}")
@@ -866,6 +877,7 @@ class DQ:
         '''
         for node,value in zip(self._iter(), other):
             node.element /= value
+        return self
     def __floordiv__(self, other):
         '''
         Return the result of elementwise evaluation with
@@ -887,6 +899,7 @@ class DQ:
         '''
         for node,value in zip(self._iter(), other):
             node.element //= value
+        return self
     def __mod__(self, other):
         '''
         Return the result of elementwise evaluation with
@@ -908,6 +921,7 @@ class DQ:
         '''
         for node,value in zip(self._iter(), other):
             node.element %= value
+        return self
     def __divmod__(self, other):
         '''
         Return the result of elementwise evaluation with
@@ -944,6 +958,7 @@ class DQ:
         '''
         for node,value in zip(self._iter(), other):
             node.element **= value
+        return self
     def __lshift__(self, other):
         '''
         Return the result of elementwise evaluation with
@@ -965,6 +980,7 @@ class DQ:
         '''
         for node,value in zip(self._iter(), other):
             node.element <<= value
+        return self
     def __rshift__(self, other):
         '''
         Return the result of elementwise evaluation with
@@ -986,6 +1002,7 @@ class DQ:
         '''
         for node,value in zip(self._iter(), other):
             node.element >>= value
+        return self
     def __and__(self, other):
         '''
         Return the result of elementwise evaluation with
@@ -1007,6 +1024,7 @@ class DQ:
         '''
         for node,value in zip(self._iter(), other):
             node.element &= value
+        return self
     def __xor__(self, other):
         '''
         Return the result of elementwise evaluation with
@@ -1028,6 +1046,7 @@ class DQ:
         '''
         for node,value in zip(self._iter(), other):
             node.element ^= value
+        return self
     def __or__(self, other):
         '''
         Return the result of elementwise evaluation with
@@ -1049,6 +1068,7 @@ class DQ:
         '''
         for node,value in zip(self._iter(), other):
             node.element |= value
+        return self
     def __lt__(self, other):
         if not isinstance(other, type(self)):
             return NotImplemented
