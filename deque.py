@@ -640,7 +640,7 @@ class DQ:
             DQ()(a, b, c) # new deque 123456789
             DQ()(a)(b)(c) # new deque 123456789
             a(b)(c) # a is now 123456789
-            a(b(c)) # a is now 123456789, b is now 456789
+            a(b(c)) # a is now 123456789456789, b is now 456789
         '''
         for other in args:
             self.extend(other)
