@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>STOLP</title>
+</head>
+<body>
+<table align='center' width=600><tr><td><div align='justify'>
+Welcome to the Star Trek Online Loot Parser! <strong>Simply click "Choose Files" below,
+select your chatlogs, and click OK.</strong> The parser will process your chatlogs, looking
+for chat messages indicating that you gained or lost Contraband, Dilithium (including Refined
+Dilithium), Dilithium Ore, or Energy Credits. It will then compile the results into a table
+with the net gains for each day.
+<br /><br />
+By default, your <strong>logs are stored</strong> in a folder like
+<span style='font-family: Consolas, Lucida Console, Courier'>
+C:\Program Files (x86)\Perfect World Entertainment\Star Trek Online_en_&lt;yyyymmddhhmmss&gt;\Star
+Trek Online\Live\logs\GameClient</span>, where <span style='font-family: Consolas, Lucida Console, Courier; font-size: 9'>
+&lt;yyyymmddhhmmss&gt;</span> represents the exact time that you last installed STO
+on your computer.
+<br /><br />
+If you play for a few hours every day, this process takes around 1 second per month of logs.
+Note that it will take longer if you don't turn off your chatlog during combat! Combat logs
+only contain messages related to combat, while chat logs contain all messages sent to your
+chat window, including those not displayed in your current chat tab (or even any tab),
+<em>including combat messages</em>. You can save storage space and processing time by
+turning off chat logging during combat, as chat logs with combat can be over 10x larger.
+<br /><br />
+</div></td></tr></table>
+<table width=600 align='center'>
+<tr><td><span style='font-family: Consolas, Lucida Console, Courier'>/chatlog</span></td><td>Tells you whether chat logging is on or off.</td></tr>
+<tr><td><span style='font-family: Consolas, Lucida Console, Courier'>/chatlog 0</span></td><td>Turns off chat logging.</td></tr>
+<tr><td><span style='font-family: Consolas, Lucida Console, Courier'>/chatlog 1</span></td><td>Turns on chat logging.</td></tr>
+<tr><td><span style='font-family: Consolas, Lucida Console, Courier'>/combatlog</span></td><td>Tells you whether combat logging is on or off.</td></tr>
+<tr><td><span style='font-family: Consolas, Lucida Console, Courier'>/combatlog 0</span></td><td>Turns off combat logging.</td></tr>
+<tr><td><span style='font-family: Consolas, Lucida Console, Courier'>/combatlog 1</span></td><td>Turns on combat logging.</td></tr>
+</table>
+<br /><br />
+<table width=600 align='center'>
+<tr><td>
+<input type="file" id="files" name="files[]" multiple />
+</td></tr>
+<tr><td>
+<div id="logger"></div>
+</td></tr>
+<tr><td>
+<output id="list"></output>
+</td></tr></table>
+<script>
+    function handleFileSelect(evt) {
+        let current_day = 0
+        let totals = {}
+        let numfiles = 0
+        document.getElementById('list').innerHTML = ('')
+        let files = evt.target.files
+        let dt = new Date()
+        // files is a FileList of File objects.
+        for (let i = 0, f; f = files[i]; i++) {
+            let quantity = 0
+            let item = ''
+            let reader = new FileReader()
+            reader.onload = function(fileObject) {
+                let lines = fileObject.target.result.split(/[\r\n]+/g)
+                for (let j = 0, line; line = lines[j]; j++) {
+                    if (line.slice(26,70) == ",0,NumericReceived@,@,,,System]You received " &&
+                        (line.includes('Dilithium') || line.includes('Energy Credits'))) {
+                        let qi = line.trim().slice(70).split(/\s+/g)
+                        /*
+                        the API for string.replace and/or parseInt must've changed at some point...
+                        ',' used to work a few months ago but now we have to use have to use /,/g
+                        because otherwise it'll only replace one comma, and then parseInt just
+                        truncates when it meets a non-int, turning e.g. "1000,000" into 1000
+                        */
+                        quantity = parseInt(qi.shift().replace(/,/g, ''))
+                        item = qi.join(' ')
+                        if (item == 'Refined Dilithium') {
+                            item = 'Dilithium'
+                        }
+                    }
+                    else if (line.slice(26,66) == ",0,NumericReceived@,@,,,System]You sold ") {
+                        item = 'Energy Credits'
+                        quantity = parseInt(line.trim().split(/\s+/g).slice(-3,-2)[0].replace(/,/g,''))
+                    }
+                    else if (line.slice(26,78) == ",0,NumericConversionSuccess@,@,,,System]You refined ") {
+                        item = 'Dilithium'
+                        quantity = parseInt(line.slice(78,-11).replace(/,/g, ''))
+                    }
+                    else if (line.slice(26,56) == ",0,NumericLost@,@,,,System]You" &&
+                            (line.slice(56,62) == " lost " || line.slice(56,63) == " spent ") &&
+                            (line.includes('Dilithium') || line.includes('Energy Credits'))) {
+                        let qi = line.slice(62).trim().split(/\s+/g)
+                        quantity = -parseInt(qi.shift().replace(/,/g,''))
+                        item = qi.join(' ')
+                        item = item == 'Refined Dilithium' ? 'Dilithium' : item
+                    }
+                    else if (line.slice(26,83) == ',0,ItemReceived@,@,,,System]Items acquired: Contraband x ') {
+                        quantity = parseInt(line.trim().slice(70).split(/\s+/g).pop().replace(/,/g,''))
+                        item = 'Contraband'
+                    }
+                    else if (line.slice(26,79) == ",0,ItemReceived@,@,,,System]Item acquired: Contraband") {
+                        quantity = 1
+                        item = 'Contraband'
+                    }
+                    else {
+                        continue
+                    }
+                    dt = new Date(year=parseInt(line.slice(11,15)), month=parseInt(line.slice(15,17))-1,
+                         date=parseInt(line.slice(17,19)), hours=parseInt(line.slice(20,22)), minutes=parseInt(line.slice(22,24)),
+                         seconds=parseInt(line.slice(24,25)))
+                    current_day = dt.getUTCDate()
+                    let m = dt.getUTCMonth()+1 // +1 because 1-12 instead of 0-11
+                    let d = dt.getUTCDate()
+                    m = m < 10 ? '0' + m : m
+                    d = d < 10 ? '0' + d : d
+                    let key = (dt.getUTCFullYear() + '-' + m + '-' + d)
+                    if (!totals.hasOwnProperty(key)) {
+                        totals[key] = {'Contraband':0, 'Dilithium':0, 'Dilithium Ore':0, 'Energy Credits':0}
+                    }
+                    if (item in totals[key]) {
+                        totals[key][item] += quantity
+                    }
+                }
+                numfiles++
+                document.getElementById('logger').innerHTML = 'Processed ' + numfiles + ' files.'
+                if (numfiles == files.length) {
+                    let k = Object.keys(totals).sort()
+                    let result = ["<table border='3' padding='3'><tr><td>Date</td><td>Contraband</td><td>Dilithium</td><td>Ore</td><td>Energy Credits</td></tr>"]
+                    for (let t = 0; t<k.length; t++) {
+                        result.push('<tr><td>' + k[t] + '</td><td>' + totals[k[t]]['Contraband'] +
+                                                        '</td><td>' + totals[k[t]]['Dilithium'] +
+                                                        '</td><td>' + totals[k[t]]['Dilithium Ore'] +
+                                                        '</td><td>' + totals[k[t]]['Energy Credits'] +
+                                                        '</td></tr>')
+                    }
+                    result.push('</table>')
+                    document.getElementById('list').innerHTML = result.join('\n')
+                }
+            }
+            reader.readAsText(f)
+        }
+    }
+
+  document.getElementById('files').addEventListener('change', handleFileSelect, false)
+</script>
+
+</body>
+</html>

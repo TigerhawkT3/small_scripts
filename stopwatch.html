@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Stopwatch</title>
+<style>
+header {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  padding: 10px;
+  padding-top: 20px;
+  background: #ffffff;
+}
+</style>
+</head>
+<body>
+<header>
+<table><tr><td><button onclick="start_stop()">start/stop</button></td>
+</td><td><button onclick="split_reset()">split/reset</button></td>
+<td><p id="current">0s</p></td></tr></table>
+</header>
+<br /><br /><br /><br />
+<table><tr><td id="resa" valign="top"></td><td id="resb" valign="top"></td></tr></table>
+<script>
+v = null
+last = 0
+t = 0
+m = 1
+results = [[]]
+function pretty_time(x) {
+    return (x>=36000?(parseInt(x/36000) + "h"):"") +
+           (x>=600?(parseInt(x/600) + "m"):"") +
+           parseInt(x/10%60) + "." + x%10 + "s"
+}
+function tmr() {
+    t+=1
+    ct = pretty_time(t)
+    document.getElementById("current").innerHTML = ct
+}
+function start_stop() {
+    if (v) {
+        clearInterval(v)
+        v = null
+    }
+    else v = setInterval(tmr, 100)
+}
+function split_reset() {
+    // split
+    if (v) {
+        results[results.length-1].push(ct + ((last || "") && (" (" + pretty_time(t-last) + ")")))
+        last = t
+        document.getElementById("resb").innerHTML = "<div id=\"currentPosition\"><table height=1px><tr><td>" + 
+                                                    results[results.length-1].join("</td></tr><tr><td>") +
+                                                    "</td></tr></table></div>"
+        window.scrollTo(0, document.getElementById("currentPosition").scrollHeight - 50)
+    }
+    // reset
+    else {
+        // soft reset
+        if (t) {
+            results[results.length-1].push(ct + ((last || "") && (" (" + pretty_time(t-last) + ")")))
+            table = []
+            m = Math.max.apply(null, results.map(function(x) {return x.length}))
+            for (var i=0; i < m; i++) {
+                temp = []
+                for (idx in results) {
+                    temp.push(results[idx][i] || "")
+                }
+                table.push("<td>" + temp.join("</td><td>") + "</td>")
+            }
+            document.getElementById("resa").innerHTML = "<table><tr>" + table.join("</tr><tr>") + "</tr></table>"
+            results.push([])
+            window.scrollTo(0, 0)
+        }
+        // hard reset
+        else {
+            results = [[]]
+            document.getElementById("resa").innerHTML = ""
+            m = 1
+        }
+        document.getElementById("resb").innerHTML = ""
+        ct = ""
+        t = 0
+        last = 0
+        document.getElementById("current").innerHTML = "0s"
+    }
+}
+split_reset()
+</script>
+
+</body>
+</html>

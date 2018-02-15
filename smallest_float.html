@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Smallest Float</title>
+</head>
+<body>
+
+<p id="demo"></p>
+
+<script>
+var divided_number = 1;
+var saved_number = 1;
+while (divided_number > 0) {
+saved_number = divided_number;
+divided_number /= 2;
+}
+
+document.getElementById("demo").innerHTML = "The smallest floating point number on your machine is " + saved_number + ".";
+</script>
+
+</body>
+</html>
