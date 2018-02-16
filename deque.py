@@ -9,7 +9,7 @@ class DQ:
     A pure Python implementation of collections.deque,
     with added features.
     '''
-    seen = set()
+    _seen = set()
     def __init__(self, items=(), maxlen=None):
         '''
         Create a new deque with the optional given iterable
@@ -27,10 +27,10 @@ class DQ:
             if maxlen<0:
                 raise ValueError('maxlen must be non-negative')
         self.maxlen = maxlen
-        self.quantity = 0
+        self._length = 0
         self.invoke_mp = 150
-        self.first = self.last = None
-        self.forward = True
+        self._first = self._last = None
+        self._forward = True
         for item in items:
             self.append(item)
     def append(self, item):
@@ -41,14 +41,14 @@ class DQ:
         Returns:
             None
         '''
-        temp = self.last
+        temp = self._last
         if temp:
-            self.last.next = self.last = Node(item)
-            self.last.prior = temp
+            self._last.next = self._last = Node(item)
+            self._last.prior = temp
         else:
-            self.first = self.last = Node(item)
-        self.quantity += 1
-        if self.maxlen is not None and self.quantity > self.maxlen:
+            self._first = self._last = Node(item)
+        self._length += 1
+        if self.maxlen is not None and self._length > self.maxlen:
             self.popleft()
     def pop(self):
         '''
@@ -57,15 +57,15 @@ class DQ:
         Returns:
             item (object): the popped item
         '''
-        temp = self.last
+        temp = self._last
         if not temp:
             raise IndexError('pop from an empty deque')
-        self.last = self.last.prior
-        if self.last:
-            self.last.next = None
-        self.quantity -= 1
+        self._last = self._last.prior
+        if self._last:
+            self._last.next = None
+        self._length -= 1
         if not self:
-            self.first = None
+            self._first = None
         return temp.element
     def appendleft(self, item):
         '''
@@ -75,14 +75,14 @@ class DQ:
         Returns:
             None
         '''
-        temp = self.first
+        temp = self._first
         if temp:
-            self.first.prior = self.first = Node(item)
-            self.first.next = temp
+            self._first.prior = self._first = Node(item)
+            self._first.next = temp
         else:
-            self.first = self.last = Node(item)
-        self.quantity += 1
-        if self.maxlen is not None and self.quantity > self.maxlen:
+            self._first = self._last = Node(item)
+        self._length += 1
+        if self.maxlen is not None and self._length > self.maxlen:
             self.pop()
     def popleft(self):
         '''
@@ -91,15 +91,15 @@ class DQ:
         Returns:
             item (object): the popped item
         '''
-        temp = self.first
+        temp = self._first
         if not temp:
             raise IndexError('pop from an empty deque')
-        self.first = self.first.next
-        if self.first:
-            self.first.prior = None
-        self.quantity -= 1
+        self._first = self._first.next
+        if self._first:
+            self._first.prior = None
+        self._length -= 1
         if not self:
-            self.last = None
+            self._last = None
         return temp.element
     def clear(self):
         '''
@@ -107,8 +107,8 @@ class DQ:
         Returns:
             None
         '''
-        self.last = self.first = None
-        self.quantity = 0
+        self._last = self._first = None
+        self._length = 0
     def copy(self):
         '''
         Returns a shallow copy of the deque.
@@ -159,7 +159,7 @@ class DQ:
             start (int): the (optional) index at which to begin searching for the item
             stop (int): the (optional) index at which to stop searching for the item
         '''
-        stop = stop or self.quantity
+        stop = stop or self._length
         for idx,val in enumerate(self):
             if val==item and start<=idx<stop:
                 return idx
@@ -176,7 +176,7 @@ class DQ:
         self.pop, self.popleft = self.popleft, self.pop
         self.appendleft, self.append = self.append, self.appendleft
         self._insert_after, self._insert_before = self._insert_before, self._insert_after
-        self.forward = not self.forward
+        self._forward = not self._forward
     def distance_to_index(self, i, q):
         '''
         Converts a given point i in or around a deque of length q to an index
@@ -212,29 +212,29 @@ class DQ:
             result (tuple): the three Node objects centered on the given index.
                             A None appears if there is no Node in that location.
         '''
-        i = self.norm_index(i, self.quantity)
-        if not self.quantity:
+        i = self.norm_index(i, self._length)
+        if not self._length:
             return None, None, None
-        if i == self.quantity:
+        if i == self._length:
             it = self._reviter()
             return next(it), None, None
-        if self.quantity == 1:
-            return None, self.first, None
+        if self._length == 1:
+            return None, self._first, None
         if not i:
             it = self._iter()
             return None, next(it), next(it)
-        if i == self.quantity-1:
+        if i == self._length-1:
             it = self._reviter()
             current = next(it)
             return next(it), current, None
-        if i < self.quantity//2:
+        if i < self._length//2:
             it = self._iter()
             for idx in range(i):
                 before = next(it)
             current, after = next(it), next(it)
         else:
             it = self._reviter()
-            for idx in range(self.quantity-i-1):
+            for idx in range(self._length-i-1):
                 after = next(it)
             current, before = next(it), next(it)
         return before, current, after
@@ -275,7 +275,7 @@ class DQ:
         Yields:
             node (Node): Node objects described by the given slice
         '''
-        r = range(*s.indices(self.quantity))
+        r = range(*s.indices(self._length))
         idx = r.start
         step = r.step
         if idx not in r:
@@ -307,8 +307,8 @@ class DQ:
         if not (isinstance(i, int) or isinstance(i, slice)):
             raise TypeError(f'deque indices must be integers or int/None slices, not {repr(type(i))}')
         if isinstance(i, int):
-            if not -self.quantity <= i < self.quantity:
-                raise IndexError(f'deque assignment index {i} out of range {-self.quantity} to {self.quantity-1}')
+            if not -self._length <= i < self._length:
+                raise IndexError(f'deque assignment index {i} out of range {-self._length} to {self._length-1}')
             before, current, after = self._neighbors(i)
             if choice == 'get':
                 return current.element
@@ -326,7 +326,7 @@ class DQ:
                     element = tuple(element)
                 slc = self._slice(i)
                 elements = iter(element)
-                r = i.indices(self.quantity)
+                r = i.indices(self._length)
                 start = r[0]
                 step = r[2]
                 length = len(range(*r))
@@ -346,7 +346,7 @@ class DQ:
                 if length:
                     for value in elements:
                         node = self._insert_after(node, value)
-                elif self.quantity:
+                elif self._length:
                     before, node, _ = self._neighbors(r[0])
                     if node:
                         try:
@@ -373,34 +373,34 @@ class DQ:
         Returns:
             None
         '''
-        if self.quantity == self.maxlen:
+        if self._length == self.maxlen:
             raise IndexError('deque already at its maximum size')
         node = Node(element)
         before, current, after = self._neighbors(i)
         if current is None:
             self.append(element)
             return
-        if self.forward:
+        if self._forward:
             if before:
                 before.next = node
             else:
-                self.first = node
+                self._first = node
             if current:
                 current.prior = node
             else:
-                self.last = node
+                self._last = node
             node.prior, node.next = before, current
         else:
             if before:
                 before.prior = node
             else:
-                self.last = node
+                self._last = node
             if current:
                 current.next = node
             else:
-                self.first = Node
+                self._first = Node
             node.next, node.prior = before, current
-        self.quantity += 1
+        self._length += 1
     def rotate(self, i):
         '''
         Rotates the deque i steps to the right. If i is negative, rotate
@@ -412,19 +412,19 @@ class DQ:
         Returns:
             None
         '''
-        if self.quantity < 2:
+        if self._length < 2:
             return
-        idx = self.distance_to_index(i, self.quantity)
+        idx = self.distance_to_index(i, self._length)
         if not idx:
             return
         before,current,after = self._neighbors(idx)
-        self.last.next, self.first.prior = self.first, self.last
-        if self.forward:
+        self._last.next, self._first.prior = self._first, self._last
+        if self._forward:
             before.next = current.prior = None
-            self.first, self.last = current, before
+            self._first, self._last = current, before
         else:
             before.prior = current.next = None
-            self.last, self.first = current, before
+            self._last, self._first = current, before
     def _remove_node(self, node):
         '''
         Remove a given Node from the deque. Requires a Node object
@@ -437,12 +437,12 @@ class DQ:
         if node.prior:
             node.prior.next = node.next
         else:
-            self.first = node.next
+            self._first = node.next
         if node.next:
             node.next.prior = node.prior
         else:
-            self.last = node.prior
-        self.quantity -= 1
+            self._last = node.prior
+        self._length -= 1
     def _insert_after(self, node, value):
         '''
         Inserts a new Node with the given value after the given Node.
@@ -452,14 +452,14 @@ class DQ:
         Returns:
             None
         '''
-        self.quantity += 1
+        self._length += 1
         n = Node(value)
         if node.next:
             other = node.next
             node.next = other.prior = n
             n.prior, n.next = node, other
         else:
-            node.next = self.last = n
+            node.next = self._last = n
             n.prior = node
         return n
     def _insert_before(self, node, value):
@@ -471,14 +471,14 @@ class DQ:
         Returns:
             None
         '''
-        self.quantity += 1
+        self._length += 1
         n = Node(value)
         if node.prior:
             other = node.prior
             node.prior = other.next = n
             n.prior, n.next = other, node
         else:
-            node.prior = self.first = n
+            node.prior = self._first = n
             n.next = node
         return n
     def _remove_replace(self, choice, old, new, count):
@@ -544,29 +544,31 @@ class DQ:
             None
         '''
         self._remove_replace('replace', old, new, count)
-    def __str__(self, parent=True):
+    def __str__(self):
         '''
         Returns the string representation of the deque.
         Can be evaluated with eval back into an equivalent deque.
         Returns:
             result (str): the deque as a string
         '''
+        seen = self.__class__._seen
+        parent = bool(seen)
         if parent:
-            self.__class__.seen.add(id(self))
-        result = 'DQ([{}])'.format(', '.join('DQ([...])' if 
-        isinstance(item, type(self)) and (id(item) in self.__class__.seen or self.__class__.seen.add(id(item))) else
-        item.__repr__(False) if isinstance(item, type(self)) else repr(item) for item in self))
+            seen.add(id(self))
+        result = 'DQ([{}])'.format(', '.join('DQ([...])'
+          if isinstance(item, type(self)) and (id(item) in seen or seen.add(id(item)))
+          else repr(item) for item in self))
         if parent:
-            self.__class__.seen.clear()
+            seen.clear()
         return result
-    def __repr__(self, parent=True):
+    def __repr__(self):
         '''
         Returns the string representation of the deque.
         Can be evaluated with eval back into an equivalent deque.
         Returns:
             result (str): the deque as a string
         '''
-        return self.__str__(parent)
+        return str(self)
     def _iter(self, current=None):
         '''
         Yields a Node for each item in the deque, from beginning (left) to end (right).
@@ -576,7 +578,7 @@ class DQ:
             node (Node): each node from the given current Node onward, or all Nodes
         '''
         if current is None:
-            current = self.first
+            current = self._first
         while current:
             yield current
             current = current.next
@@ -597,7 +599,7 @@ class DQ:
             node (Node): each node from the given current Node backward, or all Nodes
         '''
         if current is None:
-            current = self.last
+            current = self._last
         while current:
             yield current
             current = current.prior
@@ -617,7 +619,7 @@ class DQ:
         Returns:
             length (int): length of the deque
         '''
-        return self.quantity
+        return self._length
     def __bool__(self):
         '''
         Returns the boolean evaluation of the deque. A deque is falsey if empty,
@@ -625,7 +627,7 @@ class DQ:
         Returns:
             result (bool): truthiness of the deque
         '''
-        return bool(self.quantity)
+        return bool(self._length)
     def __call__(self, *args):
         '''
         Concatenate an iterable onto this deque, then return it.
@@ -701,7 +703,7 @@ class DQ:
             self.other = other
             size = n//mp.cpu_count()
             with mp.Pool() as p:
-                result = type(self)(p.imap(self.findrow, self, size))
+                result = type(self)(p.imap(self._findrow, self, size))
             del self.other
         if coerced_self and not coerced_other:
             return result[0]
@@ -711,7 +713,7 @@ class DQ:
             return result[0][0]
         else:
             return result
-    def findrow(self, row):
+    def _findrow(self, row):
         '''
         Returns the matrix multiplication result of A*B for a
         single row of A. Matrix B is stored in deque.other.
