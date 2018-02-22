@@ -23,10 +23,20 @@ class DQ:
         self.plus = self.p = self.concatenate = self.concat = self.c = self.__call__
         if maxlen is not None:
             if not isinstance(maxlen, int):
-                raise TypeError('an integer is required')
+                raise TypeError(
+                  ''
+                  'an integer is required')
             if maxlen<0:
-                raise ValueError('maxlen must be non-negative')
-        self.maxlen = maxlen
+                raise ValueError(
+                  ''
+                  'maxlen must be non-negative')
+        def g(self, m=maxlen):
+            return m
+        def s(self, x):
+            raise AttributeError(
+              ''
+              f"attribute 'maxlen' of {repr(type(self).__name__)} objects is not writable")
+        type(self).maxlen = property(g, s)
         self._length = 0
         self.invoke_mp = 150
         self._first = self._last = None
@@ -59,7 +69,9 @@ class DQ:
         '''
         temp = self._last
         if not temp:
-            raise IndexError('pop from an empty deque')
+            raise IndexError(
+              ''
+              'pop from an empty deque')
         self._last = self._last.prior
         if self._last:
             self._last.next = None
@@ -93,7 +105,9 @@ class DQ:
         '''
         temp = self._first
         if not temp:
-            raise IndexError('pop from an empty deque')
+            raise IndexError(
+              ''
+              'pop from an empty deque')
         self._first = self._first.next
         if self._first:
             self._first.prior = None
@@ -165,7 +179,9 @@ class DQ:
                 return idx
             if idx == stop:
                 break
-        raise ValueError(f'{repr(item)} is not in deque between index {start} and {stop}')
+        raise ValueError(
+          ''
+          f'{repr(item)} is not in deque between index {start} and {stop}')
     def reverse(self):
         '''
         Reverses the deque in place.
@@ -305,10 +321,14 @@ class DQ:
                                        or a deque (for 'get' with a slice)
         '''
         if not (isinstance(i, int) or isinstance(i, slice)):
-            raise TypeError(f'deque indices must be integers or int/None slices, not {repr(type(i))}')
+            raise TypeError(
+              ''
+              f'deque indices must be integers or int/None slices, not {repr(type(i).__name__)}')
         if isinstance(i, int):
             if not -self._length <= i < self._length:
-                raise IndexError(f'deque assignment index {i} out of range {-self._length} to {self._length-1}')
+                raise IndexError(
+                  ''
+                  f'deque assignment index {i} out of range {-self._length} to {self._length-1}')
             before, current, after = self._neighbors(i)
             if choice == 'get':
                 return current.element
@@ -317,7 +337,9 @@ class DQ:
             elif choice == 'del':
                 self._remove_node(current)
             else:
-                raise ValueError("choice must be 'get', 'set', or 'del'")
+                raise ValueError(
+                  ''
+                  "choice must be 'get', 'set', or 'del'")
         if isinstance(i, slice):
             if choice == 'get':
                 return type(self)(node.element for node in self._slice(i))
@@ -331,8 +353,10 @@ class DQ:
                 step = r[2]
                 length = len(range(*r))
                 if step != 1 and length != len(element):
-                    raise ValueError('attempt to assign sequence of size '
-                                    f'{length} to extended slice of size {len(element)}')
+                    raise ValueError(
+                      ''
+                      'attempt to assign sequence of size '
+                      f'{length} to extended slice of size {len(element)}')
                 if length >= len(element):
                     for value,node in zip(elements, slc):
                         node.element = value
@@ -363,7 +387,9 @@ class DQ:
                 for node in self._slice(i):
                     self._remove_node(node)
             else:
-                raise ValueError("choice must be 'get', 'set', or 'del'")
+                raise ValueError(
+                  ''
+                  "choice must be 'get', 'set', or 'del'")
     def insert(self, i, element):
         '''
         Inserts the given element at the given index i.
@@ -374,7 +400,9 @@ class DQ:
             None
         '''
         if self._length == self.maxlen:
-            raise IndexError('deque already at its maximum size')
+            raise IndexError(
+              ''
+              'deque already at its maximum size')
         node = Node(element)
         before, current, after = self._neighbors(i)
         if current is None:
@@ -509,7 +537,9 @@ class DQ:
                     node.element = new
                 counter += 1
         if not counter:
-            raise ValueError(f'{repr(old)} not in deque')
+            raise ValueError(
+              ''
+              f'{repr(old)} not in deque')
     def remove(self, item, count=1):
         '''
         Remove count instances of the given item from the deque.
@@ -686,7 +716,9 @@ class DQ:
         m = len(self)
         n2 = len(other)
         if n1 != n2:
-            raise ValueError(f'Width of left operand must match height of right operand (currently {n1} and {n2}).')
+            raise ValueError(
+              ''
+              f'Width of left operand must match height of right operand (currently {n1} and {n2}).')
         try:
             p = len(other[0])
         except TypeError:
@@ -814,7 +846,9 @@ class DQ:
             return type(self)(a*b for a,b in zip(self, other))
         except TypeError:
             pass
-        raise TypeError(f"can't multiply sequence by non-(int/iterable) of type {repr(type(other))}")
+        raise TypeError(
+          ''
+          f"can't multiply sequence by non-(int/iterable) of type {repr(type(other))}")
     def __rmul__(self, other):
         '''
         Returns a new deque consisting of the current deque's references
@@ -832,7 +866,9 @@ class DQ:
             return type(self)(a*b for a,b in zip(other, self))
         except TypeError:
             pass
-        raise TypeError(f"can't multiply sequence by non-(int/iterable) of type {repr(type(other))}")
+        raise TypeError(
+          ''
+          f"can't multiply sequence by non-(int/iterable) of type {repr(type(other).__name__)}")
     def __imul__(self, other):
         '''
         Expands the current deque to contain other repeats of its references,
@@ -857,7 +893,9 @@ class DQ:
             return self
         except TypeError:
             pass
-        raise TypeError(f"can't multiply sequence by non-(int/iterable) of type {repr(type(other))}")
+        raise TypeError(
+          ''
+          f"can't multiply sequence by non-(int/iterable) of type {repr(type(other).__name__)}")
     def __truediv__(self, other):
         '''
         Return the result of elementwise evaluation with
