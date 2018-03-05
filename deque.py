@@ -585,7 +585,7 @@ class DQ:
         parent = bool(seen)
         if parent:
             seen.add(id(self))
-        result = 'DQ([{}])'.format(', '.join('DQ([...])'
+        result = '{}([{}])'.format(type(self).__name__, ', '.join(f'{type(self).__name__}([...])'
           if isinstance(item, type(self)) and (id(item) in seen or seen.add(id(item)))
           else repr(item) for item in self))
         if parent:
