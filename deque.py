@@ -30,19 +30,31 @@ class DQ:
                 raise ValueError(
                   ''
                   'maxlen must be non-negative')
-        def g(self, m=maxlen):
-            return m
-        def s(self, x):
-            raise AttributeError(
-              ''
-              f"attribute 'maxlen' of {repr(type(self).__name__)} objects is not writable")
-        type(self).maxlen = property(g, s)
+        self.__maxlen = maxlen
         self._length = 0
         self.invoke_mp = 150
         self._first = self._last = None
         self._forward = True
         for item in items:
             self.append(item)
+    @property
+    def maxlen(self):
+        '''
+        Returns the maxlen attribute.
+        Returns:
+            maxlen (int): the deque's maximum length
+        '''
+        return self.__maxlen
+    @maxlen.setter
+    def maxlen(self, x):
+        '''
+        Forbids the modification of the maxlen read-only attribute.
+        Parameters:
+            x (object): the value to attempt to assign
+        '''
+        raise AttributeError(
+          ''
+          f"attribute 'maxlen' of {repr(type(self).__name__)} objects is not writable")
     def append(self, item):
         '''
         Adds the given item to the end (right side) of the deque.
