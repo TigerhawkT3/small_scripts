@@ -582,7 +582,7 @@ class DQ:
             result (str): the deque as a string
         '''
         seen = self.__class__._seen
-        parent = bool(seen)
+        parent = not bool(seen)
         if parent:
             seen.add(id(self))
         result = '{}([{}])'.format(type(self).__name__, ', '.join(f'{type(self).__name__}([...])'
