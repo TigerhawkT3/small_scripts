@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head><title>TIME</title></head>
+<style>
+div.date {
+    font-size:240px;
+    font-family:Consolas;
+    font-weight:Bold;
+}
+div.time {
+    font-size:280px;
+    font-family:Consolas;
+    font-weight:Bold;
+}
+</style>
+<body>
+<div class='date' id='date' align='center'></div>
+<div class='time' id='time' align='center'></div>
+<script>
+function getDate() {
+    let d = new Date();
+    document.getElementById('date').innerHTML = `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`;
+    document.getElementById('time').innerHTML = d.toString().split(' ')[4];
+}
+getDate();
+setInterval(getDate, 1000);
+</script>
+</body>
+</html>
