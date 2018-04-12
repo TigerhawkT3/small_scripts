@@ -14,12 +14,14 @@ div {
 <body>
 <div id='time'></div>
 <script>
+let w = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 function getDate() {
     let d = new Date();
-    document.getElementById('time').innerHTML =   `${d.getFullYear()}`
+    document.getElementById('time').innerHTML =   `${d.getFullYear()}`.slice(2)
                                                 + `${d.getMonth()+1}`.padStart(2, '0')
                                                 + `${d.getDate()}`.padStart(2, '0')
-                                                + " "
+                                                + `${w[d.getDay()]}`
+                                                + ' '
                                                 + `${d}`.split(' ')[4];
 }
 getDate();
