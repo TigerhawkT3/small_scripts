@@ -4,13 +4,10 @@
 <title>TIME</title>
 <style>
 div {
-    font-family: Consolas;
+    font-family: Consolas, monospace;
     font-weight: Bold;
-    font-size: 280px;
+    font-size: 220px;
     text-align: center;
-    position: absolute;
-    top: 50%;
-    transform: translate(0, -50%);
 }
 </style>
 </head>
@@ -22,7 +19,7 @@ function getDate() {
     document.getElementById('time').innerHTML =   `${d.getFullYear()}`
                                                 + `${d.getMonth()+1}`.padStart(2, '0')
                                                 + `${d.getDate()}`.padStart(2, '0')
-                                                + '\n'
+                                                + " "
                                                 + `${d}`.split(' ')[4];
 }
 getDate();
