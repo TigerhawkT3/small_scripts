@@ -12,20 +12,67 @@ div {
 </style>
 </head>
 <body>
-<div id='time'></div>
+<div onclick="toggle()" id='time'></div>
+<audio id="C4" preload="none"><source src="tones/C4.mp3" type="audio/mpeg"><source src="tones/C4.ogg" type="audio/ogg"></audio>
+<audio id="F4" preload="none"><source src="tones/F4.mp3" type="audio/mpeg"><source src="tones/F4.ogg" type="audio/ogg"></audio>
+<audio id="D4" preload="none"><source src="tones/D4.mp3" type="audio/mpeg"><source src="tones/D4.ogg" type="audio/ogg"></audio>
+<audio id="G4" preload="none"><source src="tones/G4.mp3" type="audio/mpeg"><source src="tones/G4.ogg" type="audio/ogg"></audio>
 <script>
 let w = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
-function getDate() {
-    let d = new Date();
-    document.getElementById('time').innerHTML =   `${d.getFullYear()}`.slice(2)
-                                                + `${d.getMonth()+1}`.padStart(2, '0')
-                                                + `${d.getDate()}`.padStart(2, '0')
-                                                + `${w[d.getDay()]}`
-                                                + ' '
-                                                + `${d}`.split(' ')[4];
+let ids = [['C4', 'F4'], ['D4', 'G4']]
+let speaking = false
+let busy = false
+let delay = 5
+function sleep(ms) {
+    // a sleep function. usage:
+    // async func() { await sleep(1000) }
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
-getDate();
-setInterval(getDate, 1000);
+function getDate() {
+    // produces an array of useful date data for other functions
+    let d = new Date();
+    return [d.getHours(), d.getMinutes(), d.getSeconds(), `${d.getFullYear()}`.slice(2),
+            `${d.getMonth()+1}`.padStart(2, '0'),
+            `${d.getDate()}`.padStart(2, '0'), `${w[d.getDay()]}`,
+            ' ', `${d}`.split(' ')[4]]
+}
+function update() {
+    // updates the display, and speaks the time if that's on
+    let [h,m,s, ...e] = getDate()
+    document.getElementById('time').innerHTML = e.join('');
+    if (speaking && !(m%(delay)) && !s) {
+        speak([h,m])
+    }
+}
+async function speak(t) {
+    // speaks array of two numbers "t" in binary.
+    if (busy) return
+    busy = true
+    for ([idx,v] of t.entries()) {
+        for (digit of v.toString().padStart(2, '0')) {
+            for (c of parseInt(digit).toString(2).split('')) {
+                document.getElementById(ids[idx][c]).play()
+                await sleep(700)
+            }
+            await sleep(500)
+        }
+        await sleep(500)
+    }
+    busy = false
+}
+
+function toggle() {
+    // toggle speech. prompt on activation. invalid interval cancels.
+    if (!speaking) {
+        let t = parseInt(prompt('Announce time now and on n-minute multiples (click/tap time again to disable):', '5'))
+        if (t>0) delay = t
+        else return
+        speak(getDate().slice(0,2))
+    }
+    speaking = !speaking
+}
+update();
+setInterval(update, 1000);
 </script>
 </body>
 </html>
