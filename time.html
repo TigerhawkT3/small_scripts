@@ -12,14 +12,26 @@ div {
 </style>
 </head>
 <body>
-<div onclick="toggle()" id='time'></div>
+<div id='time'></div>
 <audio id="C4" preload="none"><source src="tones/C4.mp3" type="audio/mpeg"><source src="tones/C4.ogg" type="audio/ogg"></audio>
 <audio id="F4" preload="none"><source src="tones/F4.mp3" type="audio/mpeg"><source src="tones/F4.ogg" type="audio/ogg"></audio>
 <audio id="D4" preload="none"><source src="tones/D4.mp3" type="audio/mpeg"><source src="tones/D4.ogg" type="audio/ogg"></audio>
 <audio id="G4" preload="none"><source src="tones/G4.mp3" type="audio/mpeg"><source src="tones/G4.ogg" type="audio/ogg"></audio>
+<audio id="C5" preload="none"><source src="tones/C5.mp3" type="audio/mpeg"><source src="tones/C5.ogg" type="audio/ogg"></audio>
+<audio id="F5" preload="none"><source src="tones/F5.mp3" type="audio/mpeg"><source src="tones/F5.ogg" type="audio/ogg"></audio>
+<audio id="D5" preload="none"><source src="tones/D5.mp3" type="audio/mpeg"><source src="tones/D5.ogg" type="audio/ogg"></audio>
+<audio id="G5" preload="none"><source src="tones/G5.mp3" type="audio/mpeg"><source src="tones/G5.ogg" type="audio/ogg"></audio>
 <script>
+let ids
+if (navigator.maxTouchPoints) {
+    ids = [['C5', 'F5'], ['D5', 'G5']]
+    document.onclick = toggle
+}
+else {
+    ids = [['C4', 'F4'], ['D4', 'G4']]
+    document.getElementById('time').onclick = toggle
+}
 let w = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
-let ids = [['C4', 'F4'], ['D4', 'G4']]
 let speaking = false
 let busy = false
 let delay = 5
