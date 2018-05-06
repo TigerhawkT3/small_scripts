@@ -13,22 +13,21 @@ div {
 </head>
 <body>
 <div id='time'></div>
-<audio id="C4" preload="none"><source src="tones/C4.mp3" type="audio/mpeg"><source src="tones/C4.ogg" type="audio/ogg"></audio>
-<audio id="F4" preload="none"><source src="tones/F4.mp3" type="audio/mpeg"><source src="tones/F4.ogg" type="audio/ogg"></audio>
-<audio id="D4" preload="none"><source src="tones/D4.mp3" type="audio/mpeg"><source src="tones/D4.ogg" type="audio/ogg"></audio>
-<audio id="G4" preload="none"><source src="tones/G4.mp3" type="audio/mpeg"><source src="tones/G4.ogg" type="audio/ogg"></audio>
-<audio id="C5" preload="none"><source src="tones/C5.mp3" type="audio/mpeg"><source src="tones/C5.ogg" type="audio/ogg"></audio>
-<audio id="F5" preload="none"><source src="tones/F5.mp3" type="audio/mpeg"><source src="tones/F5.ogg" type="audio/ogg"></audio>
-<audio id="D5" preload="none"><source src="tones/D5.mp3" type="audio/mpeg"><source src="tones/D5.ogg" type="audio/ogg"></audio>
-<audio id="G5" preload="none"><source src="tones/G5.mp3" type="audio/mpeg"><source src="tones/G5.ogg" type="audio/ogg"></audio>
+<audio id="C4" preload="auto"><source src="tones/C4.mp3" type="audio/mpeg"><source src="tones/C4.ogg" type="audio/ogg"></audio>
+<audio id="E4" preload="auto"><source src="tones/E4.mp3" type="audio/mpeg"><source src="tones/E4.ogg" type="audio/ogg"></audio>
+<audio id="G4" preload="auto"><source src="tones/G4.mp3" type="audio/mpeg"><source src="tones/G4.ogg" type="audio/ogg"></audio>
+<audio id="C5" preload="auto"><source src="tones/C5.mp3" type="audio/mpeg"><source src="tones/C5.ogg" type="audio/ogg"></audio>
+<audio id="E5" preload="auto"><source src="tones/E5.mp3" type="audio/mpeg"><source src="tones/E5.ogg" type="audio/ogg"></audio>
+<audio id="G5" preload="auto"><source src="tones/G5.mp3" type="audio/mpeg"><source src="tones/G5.ogg" type="audio/ogg"></audio>
+<audio id="C6" preload="auto"><source src="tones/C6.mp3" type="audio/mpeg"><source src="tones/C6.ogg" type="audio/ogg"></audio>
 <script>
 let ids
 if (navigator.maxTouchPoints) {
-    ids = [['C5', 'F5'], ['D5', 'G5']]
+    ids = [['C5', 'E5'], ['G5', 'C6']]
     document.onclick = toggle
 }
 else {
-    ids = [['C4', 'F4'], ['D4', 'G4']]
+    ids = [['C4', 'E4'], ['G4', 'C5']]
     document.getElementById('time').onclick = toggle
 }
 let w = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
@@ -52,7 +51,7 @@ function update() {
     // updates the display, and speaks the time if that's on
     let [h,m,s, ...e] = getDate()
     document.getElementById('time').innerHTML = e.join('');
-    if (speaking && !(m%(delay)) && !s) {
+    if (speaking && !(m%delay) && !s) {
         speak([h,m])
     }
 }
@@ -83,8 +82,17 @@ function toggle() {
     }
     speaking = !speaking
 }
-update();
-setInterval(update, 1000);
+
+async function mainloop() {
+    // an infinite loop instead of setInterval scheduling
+    // allows speak to fire while mobile device is locked
+    while (true) {
+        update()
+        await sleep(1000)
+    }
+}
+
+mainloop();
 </script>
 </body>
 </html>
