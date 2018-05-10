@@ -83,16 +83,8 @@ function toggle() {
     speaking = !speaking
 }
 
-async function mainloop() {
-    // an infinite loop instead of setInterval scheduling
-    // allows speak to fire while mobile device is locked
-    while (true) {
-        update()
-        await sleep(1000)
-    }
-}
-
-mainloop();
+update();
+setInterval(update, 1000);
 </script>
 </body>
 </html>
