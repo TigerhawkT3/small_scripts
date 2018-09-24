@@ -10,11 +10,6 @@ def ping_stream(cmd):
     if return_code:
         raise subprocess.CalledProcessError(return_code, cmd)
 
-def update(*windows):
-    for window in windows:
-        window.noutrefresh()
-    curses.doupdate()
-
 class App:
     def __init__(self, stdscr):
         self.stdscr = stdscr
@@ -30,17 +25,10 @@ class App:
                       (curses.COLOR_RED, curses.COLOR_RED)]
         curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE)
         stdscr.clear()
-        self.pad.addstr(self.char * ((self.height * self.width)-1),
-                           curses.color_pair(1))
-        self.pad.insch(ord(self.char), curses.color_pair(1))
-        stdscr.refresh()
-        pad.refresh(0,0, 0,0, self.height-1,self.width-1)
         data = ping_stream(['ping', '-t', *(sys.argv[1:] or ['www.google.com'])])
         #data = [f'time={t}ms' for t in (0,0,50,150,250,350,1100,900)]; data.insert(6, 'timed out')
         self.process(data)
     def process(self, data):
-        data = iter(data)
-        next(data); next(data) # skip the header
         for datum in data:
             if self.stdscr.getch() != -1:
                 break
