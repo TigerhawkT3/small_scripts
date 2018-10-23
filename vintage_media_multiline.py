@@ -1,9 +1,9 @@
 items = {'cassette':[' ______________ ',
                      '|   __    __   |',
-                    '|  /  \  /  \  |',
-                    '|  \__/  \__/  |',
-                    '|  __________  |',
-                    '|_/_O______O_\_|'],
+                     '|  /  \  /  \  |',
+                     '|  \__/  \__/  |',
+                     '|  __________  |',
+                     '|_/_O______O_\_|'],
          'vhs':[' ______________________  ',
                 '|                      | ',
                 '|     ____________     | ',
@@ -35,19 +35,16 @@ and orientation (square, UR, UL, LR, LL) separated by space,
 or leave blank to exit:\n''')
     if not i:
         break
-    rows, columns, shape, orientation = i.split()
-    rows = int(rows)
-    columns = int(columns)
-    shape = items[shape.lower()]
-    square = orientation.lower() not in ('ul', 'ur', 'll', 'lr')
-    upper = orientation[0].lower() == 'u'
-    left = orientation[1:2].lower() == 'l'
+    *rc, shape, orientation = i.lower().split()
+    rows, columns = map(int, rc)
+    shape = items[shape]
+    square = orientation not in ('ul', 'ur', 'll', 'lr')
+    upper = orientation[0] == 'u'
+    left = orientation[1:2] == 'l'
     for row in range(rows):
         for line in shape:
             if square:
                 print(line*columns)
             else:
                 content = line * min(columns, rows*upper + ((-1)**upper)*row + (not upper))
-                if not left:
-                    content = content.rjust(len(line)*columns)
-                print(content)
+                print(f'{content:{"><"[left]}{len(line)*columns}}')
