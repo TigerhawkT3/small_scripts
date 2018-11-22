@@ -23,19 +23,20 @@ class PingMonitor:
         self.top.bind('<Alt-Return>', self.remove_borders)
         self.top.bind('<Shift-Return>', self.make_opaque)
         self.top.bind('<Control-Return>', self.make_topmost)
+        self.top.bind('<F5>', self.reset_box)
         for i in range(10):     # 0-9 to set window transparency
             self.top.bind(f'{i}', lambda event=None, i=i: self.top.attributes('-alpha', i/10 or 1))
             self.top.bind(f'KP_{i}', lambda event=None, i=i: sself.top.attributes('-alpha', i/10 or 1))
         for key in ('<Up>', '<Down>', '<Left>', '<Right>'):
             self.top.bind(key, self.set_orientation)
-        self.canvas.bind('<Button-1>', self.set_width)
-        self.canvas.bind('<B1-Motion>', self.set_width)
+        self.canvas.bind('<Button-3>', self.start_box)
+        self.canvas.bind('<B3-Motion>', self.update_box)
+        self.canvas.bind('<ButtonRelease-3>', self.end_box)
         self.top.bind('<Escape>', self.end)
-        self.meter = self.canvas.create_rectangle(0,0,
-                                                  self.top.winfo_width()-1,self.top.winfo_height()-1,
-                                                  fill='black')
         def ping():
             '''start a ping command and update the display with each new datum'''
+            self.x1, self.y1, self.x2, self.y2 = 0, 0, self.top.winfo_width(), self.top.winfo_height()
+            self.meter = self.canvas.create_rectangle(self.x1,self.y1, self.x2,self.y2, fill='black')
             DETACHED_PROCESS = 8 # run the subprocess without a console window
             cmd = ['ping', '-t', *(sys.argv[1:] or ['www.google.com'])]
             self.popen = subprocess.Popen(cmd,
@@ -44,7 +45,6 @@ class PingMonitor:
                                           creationflags=DETACHED_PROCESS)
             for datum in iter(self.popen.stdout.readline, ''):
                 if 'time=' in datum:
-                    w,h = self.top.winfo_width()-1,self.top.winfo_height()-1
                     ping = int(datum.partition('time=')[2].partition('ms')[0])
                     half = self.limit/2
                     green,red = 'FF',hex(255-int(255*abs(min(ping, self.limit) - half)/half))[2:]
@@ -53,17 +53,17 @@ class PingMonitor:
                     color = f'#{red:0>2}{green:0>2}00'
                     self.canvas.itemconfig(self.meter, outline=color, fill=color)
                     if self.orientation[0] == 'L':
-                        x1,y1, x2,y2 = 0,0, self.find_size(w, ping),h
+                        x1,y1, x2,y2 = self.x1,self.y1, self.x1+self.find_size(self.x2-self.x1, ping),self.y2
                     elif self.orientation[0] == 'R':
-                        x1,y1, x2,y2 = w-self.find_size(w, ping),0, w,h
+                        x1,y1, x2,y2 = self.x2-self.find_size(self.x2-self.x1, ping),self.y1, self.x2,self.y2
                     elif self.orientation[0] == 'U':
-                        x1,y1, x2,y2 = 0,0, min(w, self.max_width) or w,self.find_size(h, ping)
+                        x1,y1, x2,y2 = self.x1,self.y1, self.x2,self.y1+self.find_size(self.y2-self.y1, ping)
                     elif self.orientation[0] == 'D':
-                        x1,y1, x2,y2 = 0,h-self.find_size(h, ping), min(w, self.max_width) or w,h
+                        x1,y1, x2,y2 = self.x1,self.y2-self.find_size(self.y2-self.y1, ping), self.x2,self.y2
                     self.canvas.coords(self.meter, x1,y1, x2,y2)
                 elif 'timed out' in datum:
                     self.canvas.itemconfig(self.meter, outline='black', fill='black')
-                    self.canvas.coords(self.meter, 0,0, self.top.winfo_width(),self.top.winfo_height())
+                    self.canvas.coords(self.meter, self.x1, self.y1, self.x2, self.y2)
             self.popen.stdout.close()
         self.thread = threading.Thread()    # start a new thread
         self.thread.run = ping              # set the thread's run method to our ping command above
@@ -82,11 +82,22 @@ class PingMonitor:
         self.popen.terminate()
         self.top.destroy()
         self.parent.destroy()
-    def set_width(self, event=None):
-        '''set the max width for a vertical display.
-        widths less than zero or larger than the window
-        will revert to following the window width.'''
-        self.max_width = event.x if 0 < event.x < self.top.winfo_width() else 0
+    def start_box(self, event=None):
+        '''begin defining a bounding box for the display.'''
+        self.temp_x1, self.temp_y1 = event.x, event.y
+        self.box = self.canvas.create_rectangle(event.x, event.y, event.x, event.y, outline='blue')
+    def update_box(self, event=None):
+        '''update the bounding box guide'''
+        self.canvas.coords(self.box, self.temp_x1, self.temp_y1, event.x, event.y)
+    def end_box(self, event=None):
+        '''complete the definition of a bounding box for the display.'''
+        self.x2, self.y2 = event.x, event.y
+        self.x1, self.x2 = sorted((self.temp_x1, self.x2))
+        self.y1, self.y2 = sorted((self.temp_y1, self.y2))
+        self.parent.after(2000, self.canvas.delete, self.box)
+    def reset_box(self, event=None):
+        '''reset the display area to the window size'''
+        self.x1, self.y1, self.x2, self.y2 = 0, 0, self.top.winfo_width(), self.top.winfo_height()
     def set_orientation(self, event=None):
         '''change the orientation to L/R/U/D'''
         self.orientation = event.keysym[0]
