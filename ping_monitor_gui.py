@@ -2,6 +2,7 @@ import subprocess
 import sys
 import tkinter as tk
 import threading
+from collections import deque as DQ
 
 class PingMonitor:
     def __init__(self, parent):
@@ -15,14 +16,29 @@ class PingMonitor:
         self.canvas = tk.Canvas(self.top, highlightthickness=0, bd=0, bg='white')
         self.canvas.pack(fill='both', expand=True)
         self.limit = 1000       # when ping is over this many ms, the display is full and red
+        self.ping = None        # starting ping
         self.borderless = False # start with normal window title bar
         self.opaque = True      # start with opaque background
         self.topmost = False    # start without being topmost window
         self.orientation = 'L'  # anchor ping bar at the left
-        self.max_width = 0      # max width for vertical display starts unbounded
+        self.states = DQ([[(0, 0),
+                           self.borderless,
+                           self.opaque,
+                           self.topmost,
+                           self.orientation,
+                           (0,0, 100,100)],
+                          [(0, 0),
+                           self.borderless,
+                           self.opaque,
+                           self.topmost,
+                           self.orientation,
+                           (0,0, 100,100)]], maxlen=2) # 2 latest states for cursor flee
+        self.flight = False     # start with mouse flee off
         self.top.bind('<Alt-Return>', self.remove_borders)
         self.top.bind('<Shift-Return>', self.make_opaque)
         self.top.bind('<Control-Return>', self.make_topmost)
+        self.top.bind('<Button-2>', self.add_state)
+        self.top.bind('<BackSpace>', self.toggle_flee)
         self.top.bind('<F5>', self.reset_box)
         for i in range(10):     # 0-9 to set window transparency
             self.top.bind(f'{i}', lambda event=None, i=i: self.top.attributes('-alpha', i/10 or 1))
@@ -45,25 +61,10 @@ class PingMonitor:
                                           creationflags=DETACHED_PROCESS)
             for datum in iter(self.popen.stdout.readline, ''):
                 if 'time=' in datum:
-                    ping = int(datum.partition('time=')[2].partition('ms')[0])
-                    half = self.limit/2
-                    green,red = 'FF',hex(255-int(255*abs(min(ping, self.limit) - half)/half))[2:]
-                    if ping > self.limit/2:
-                        green,red = red,green
-                    color = f'#{red:0>2}{green:0>2}00'
-                    self.canvas.itemconfig(self.meter, outline=color, fill=color)
-                    if self.orientation[0] == 'L':
-                        x1,y1, x2,y2 = self.x1,self.y1, self.x1+self.find_size(self.x2-self.x1, ping),self.y2
-                    elif self.orientation[0] == 'R':
-                        x1,y1, x2,y2 = self.x2-self.find_size(self.x2-self.x1, ping),self.y1, self.x2,self.y2
-                    elif self.orientation[0] == 'U':
-                        x1,y1, x2,y2 = self.x1,self.y1, self.x2,self.y1+self.find_size(self.y2-self.y1, ping)
-                    elif self.orientation[0] == 'D':
-                        x1,y1, x2,y2 = self.x1,self.y2-self.find_size(self.y2-self.y1, ping), self.x2,self.y2
-                    self.canvas.coords(self.meter, x1,y1, x2,y2)
+                    self.ping = int(datum.partition('time=')[2].partition('ms')[0])
                 elif 'timed out' in datum:
-                    self.canvas.itemconfig(self.meter, outline='black', fill='black')
-                    self.canvas.coords(self.meter, self.x1, self.y1, self.x2, self.y2)
+                    self.ping = None
+                self.update_meter()
             self.popen.stdout.close()
         self.thread = threading.Thread()    # start a new thread
         self.thread.run = ping              # set the thread's run method to our ping command above
@@ -94,13 +95,37 @@ class PingMonitor:
         self.x2, self.y2 = event.x, event.y
         self.x1, self.x2 = sorted((self.temp_x1, self.x2))
         self.y1, self.y2 = sorted((self.temp_y1, self.y2))
+        self.update_meter()
         self.parent.after(2000, self.canvas.delete, self.box)
     def reset_box(self, event=None):
         '''reset the display area to the window size'''
         self.x1, self.y1, self.x2, self.y2 = 0, 0, self.top.winfo_width(), self.top.winfo_height()
-    def set_orientation(self, event=None):
+        self.update_meter()
+    def set_orientation(self, event=None, orient=None):
         '''change the orientation to L/R/U/D'''
-        self.orientation = event.keysym[0]
+        self.orientation = event.keysym[0] if event else orient
+        self.update_meter()
+    def update_meter(self):
+        '''update the meter display based on the current ping'''
+        if self.ping is None:
+            self.canvas.itemconfig(self.meter, outline='black', fill='black')
+            self.canvas.coords(self.meter, self.x1, self.y1, self.x2, self.y2)
+            return
+        half = self.limit/2
+        green,red = 'FF',hex(255-int(255*abs(min(self.ping, self.limit) - half)/half))[2:]
+        if self.ping > self.limit/2:
+            green,red = red,green
+        color = f'#{red:0>2}{green:0>2}00'
+        self.canvas.itemconfig(self.meter, outline=color, fill=color)
+        if self.orientation[0] == 'L':
+            x1,y1, x2,y2 = self.x1,self.y1, self.x1+self.find_size(self.x2-self.x1, self.ping),self.y2
+        elif self.orientation[0] == 'R':
+            x1,y1, x2,y2 = self.x2-self.find_size(self.x2-self.x1, self.ping),self.y1, self.x2,self.y2
+        elif self.orientation[0] == 'U':
+            x1,y1, x2,y2 = self.x1,self.y1, self.x2,self.y1+self.find_size(self.y2-self.y1, self.ping)
+        elif self.orientation[0] == 'D':
+            x1,y1, x2,y2 = self.x1,self.y2-self.find_size(self.y2-self.y1, self.ping), self.x2,self.y2
+        self.canvas.coords(self.meter, x1,y1, x2,y2)
     def remove_borders(self, event=None):
         '''toggle the window's title bar, border, etc.'''
         self.borderless = not self.borderless
@@ -125,6 +150,40 @@ class PingMonitor:
             self.top.attributes('-transparent', not self.opaque)
             self.top.config(bg=('systemTransparent', '')[self.opaque])
             self.canvas.config(bg=('systemTransparent', 'white')[self.opaque])
+    def toggle_flee(self, event=None):
+        '''toggle mouse flee mode'''
+        self.flight = not self.flight
+        if self.flight:
+            self.canvas.bind('<Enter>', self.flee)
+        else:
+            self.canvas.unbind('<Enter>')
+    def flee(self, event=None):
+        '''make the window flee from the mouse so you don't accidentally
+        click on it in while it's on top of a fullscreen application'''
+        state = self.states[0]
+        self.top.geometry('+{}+{}'.format(*state[0]))
+        if self.borderless != state[1]:
+            self.remove_borders()
+        if self.opaque != state[2]:
+            self.make_opaque()
+        if self.topmost != state[3]:
+            self.make_topmost()
+        if self.orientation != state[4]:
+            self.set_orientation(orient=state[4])
+        self.x1, self.y1, self.x2, self.y2 = state[5]
+        self.update_meter()
+        self.states.reverse()
+    def add_state(self, event=None):
+        '''add a location to the mouse flee queue'''
+        self.states.append([self.top.geometry().split('+')[-2:],
+                            self.borderless,
+                            self.opaque,
+                            self.topmost,
+                            self.orientation,
+                            (self.x1,
+                             self.y1,
+                             self.x2,
+                             self.y2)])
     def find_size(self, dimension, ping):
         '''find the size in pixels of the ping bar, given the
         window size (dimension) and the current ping (relative
