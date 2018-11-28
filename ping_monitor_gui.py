@@ -66,18 +66,12 @@ class PingMonitor:
                     self.ping = None
                 self.update_meter()
             self.popen.stdout.close()
-        self.thread = threading.Thread()    # start a new thread
-        self.thread.run = ping              # set the thread's run method to our ping command above
+        self.thread = threading.Thread(target=ping)    # start a new thread with our ping command above
         self.thread.start()                 # start the thread
-        self.update()                       # keep checking on the thread and updating the display
         # setting a transparent bg for the first time breaks the window's title bar; this bypasses that
         for _ in range(2):
             self.make_opaque()
             self.remove_borders()
-    def update(self):
-        '''check on the thread and schedule the next check'''
-        if self.thread.isAlive():
-            self.parent.after(500, self.update)
     def end(self, event=None):
         '''stop the ping process and close the window'''
         self.popen.terminate()
