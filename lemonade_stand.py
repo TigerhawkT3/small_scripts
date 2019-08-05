@@ -1,4 +1,4 @@
-def get_order():
+def get_items():
     item = input()
     if not item:
         return '00'
@@ -8,23 +8,23 @@ def get_order():
     return item, quantity
     
 register = 0
-order = ''
-prices = 50, 75, 100
+items = ''
+prices = 500,700,10000
 
-print('Lemonade Stand starting up...')
-print('Ready to take orders!')
+print('Cash register starting up...')
+print('Ready to scan items!')
 
 while 1:
-    print('What would you like to order (1-3)? One at a time, please.')
-    print('1. Glass of lemonade - $0.50\n'
-          '2. Glass of grapefruit juice - $0.75\n'
-          '3. Cookie - $1.00')
+    print('What would you like to buy (1-3)? One at a time, please.')
+    print('1. Pencil - $5.00\n'
+          '2. Notebook - $7.00\n'
+          '3. Lord Of The Rings - $100.00')
     item, quantity = get_order()
     if item == 'Q':
         break
     if item == '0':
         quantities = list(order.count(obj) for obj in '123')
-        for name,number,price in zip(('Glasses of lemonade', 'Glasses of grapefruit juice', 'Cookies'),
+        for name,number,price in zip(('Number of pencils', 'Number of notebooks', 'Lord Of The Rings'),
                                        quantities,
                                        prices):
             if number:
@@ -51,8 +51,8 @@ while 1:
                 quant = user_denominations[denomination]
                 if quant:
                     print('{}: {}'.format(denomination, quant))
-        order = ''
+        items = ''
     else:
-        order += item*quantity
+        items += item*quantity
 
 print("Today's total: ${:.02f}".format(register/100))
