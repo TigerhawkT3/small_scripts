@@ -26,11 +26,11 @@ bldU := Object("A","𝕬","B","𝕭"
 ,"O","𝕺","P","𝕻","Q","𝕼","R","𝕽"
 ,"S","𝕾","T","𝕿","U","𝖀","V","𝖁"
 ,"W","𝖂","X","𝖃","Y","𝖄","Z","𝖅")
-    
+
 to_fraktur(dicL, dicU) {
     Loop {
-        Input, key, L1
-        if (key == ";")
+        Input, key, L1, {Backspace}{Esc}{Delete}{Up}{Down}{Left}{Right}
+        if (InStr(ErrorLevel, "EndKey") == 1)
             break
         if dicL.HasKey(key) {
             if key is lower
