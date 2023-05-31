@@ -9,7 +9,16 @@ directory = sys.argv[1]
 command = sys.argv[2]
 extensions = set(sys.argv[3].split())
 batchsize = int(sys.argv[4])
-template = '{command} "{inp}" "{outp}"; if ($?) {{ rm -literalpath "{inp}" }}'
+template = '''{command} @"
+{inp}
+"@ `
+@"
+{outp}
+"@;
+if ($?) {{ rm -literalpath @"
+{inp}
+"@
+}}'''
 
 # adapted from https://stackoverflow.com/a/26783779/2617068
 def work(command, name):
