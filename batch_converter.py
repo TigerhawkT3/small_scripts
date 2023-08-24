@@ -40,13 +40,14 @@ parser.add_argument('-v', '--verbosity', type=int, default=3, help=('''\
 3: Same as above, plus latest input file converted.
 4: Same as above, on separate lines instead of updating a single line.'''))
 args = parser.parse_args()
-args.source_extensions = set(args.source_extensions)
 if args.directory.startswith('.\\'):
     args.directory = args.directory[2:]
+if args.clone:
+    args.clone = os.path.abspath(args.clone.strip('\\/'))
 if args.clone.startswith('.\\'):
     args.clone = args.clone[2:]
 args.directory = os.path.abspath(args.directory.strip('\\/'))
-args.clone = os.path.abspath(args.clone.strip('\\/'))
+args.source_extensions = set(args.source_extensions)
 
 # py batch_convert.py C:\images "cjxl -d 0" jxl -s png -s jpg jpeg -w 4
 # py batch_convert.py C:\images "cwebp -z 6" webp -s png -o "-o" -w 4 -c D:\backup\images
@@ -84,6 +85,7 @@ verbosity_persist = '''write-host @"
 '''
 end_template = '''
 }}'''
+
 if args.clone:
     template = clone + template
 if args.delete_originals:
@@ -111,6 +113,7 @@ files = [(base,ext.lstrip('.')) for base,ext in map(os.path.splitext,
             glob.iglob(os.path.join(args.directory, '**', '*.*'), recursive=True))
                 if ext.lower().lstrip('.') in args.source_extensions]
 num_files = len(files)
+
 for idx,(base, ext) in enumerate(files, start=1):
     inp = base + f'.{ext}'
     outp = (os.path.join(args.clone,
