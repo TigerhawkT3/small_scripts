@@ -8,13 +8,13 @@ parser = argparse.ArgumentParser(prog='Batch converter',
     description='Run a converter in parallel.',
     formatter_class=argparse.RawTextHelpFormatter,
     epilog='''Convert images in .\\vacation\images to JXL in place:
-  py batch_converter.py .\\vacation\images "cjxl -j 0 -d 1" jxl -s png -s jpg jpeg -r -d -v 0
+  py batch_converter.py .\\vacation\images "cjxl -j 0 -d 1" jxl -s png -s jpg jpeg -r -X -v 0
 Convert videos with basename collisions in .\\vacation\movies to a cloned directory,
 hiding all of FFmpeg's console output:
   py batch_converter.py .\\vacation\\movies "ffmpeg -i" mp4 -s mov 3gpp `
   -c .\\vacation\\backup -v 3 -o "-c:v libx264 -crf 22 -c:a libopus -b:a 64k" -w 1 2>NUL
 Convert some PNG images to WebP in place:
-  py batch_converter.py gallery "cwebp -z 6" webp -s png -r -d -v 1 -o "-o"
+  py batch_converter.py gallery "cwebp -z 6" webp -s png -r -X -v 1 -o "-o"
 ''')
 parser.add_argument('directory', help='Source directory containing your files.') # C:\images
 parser.add_argument('command', help='The conversion program to run, including options.') # "cjxl -j 0 -d 1"
