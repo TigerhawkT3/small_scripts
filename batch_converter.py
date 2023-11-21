@@ -12,15 +12,16 @@ parser = argparse.ArgumentParser(prog='Batch converter',
 Convert videos with basename collisions in .\\vacation\movies to a cloned directory,
 hiding all of FFmpeg's console output:
   py batch_converter.py .\\vacation\\movies "ffmpeg -i" mp4 -s mov 3gpp `
-  -c .\\vacation\\backup -v 3 -o "-c:v libx264 -crf 22 -c:a libopus -b:a 64k" -w 1 2>NUL
+  -c .\\vacation\\backup -v 3 -o="-c:v libx264 -crf 22 -c:a libopus -b:a 64k" -w 1 2>NUL
 Convert some PNG images to WebP in place:
-  py batch_converter.py gallery "cwebp -z 6" webp -s png -r -X -v 1 -o "-o"
+  py batch_converter.py gallery "cwebp -z 6" webp -s png -r -X -v 1 -o=-o
 ''')
 parser.add_argument('directory', help='Source directory containing your files.') # C:\images
 parser.add_argument('command', help='The conversion program to run, including options.') # "cjxl -j 0 -d 1"
 parser.add_argument('target_extension', help='The file type extension to add to output files.') # jxl
 parser.add_argument('-o', '--output-switch', default='',
-    help='Any options inserted before the output name.') # -o "-o" (when the output needs a switch, viz cwebp)
+    help='Any options inserted before the output name. Use = to start with -, e.g. -o=-o or -o=\'-c:v libx264\'.')
+    # -o="-o" (when the output needs a switch, viz cwebp)
 parser.add_argument('-w', '--workers', type=int, default=4, help='Number of simultaneous CPU workers.') # 4
 parser.add_argument('-s', '--source-extensions', action='extend', nargs='+',
     help='File type extentions to convert (no leading period, case-insensitive).') # -s png -s jpg jpeg
