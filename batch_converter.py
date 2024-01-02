@@ -7,9 +7,9 @@ import os
 parser = argparse.ArgumentParser(prog='Batch converter',
     description='Run a converter in parallel.',
     formatter_class=argparse.RawTextHelpFormatter,
-    epilog='''Convert images in .\\vacation\images to JXL in place:
-  py batch_converter.py .\\vacation\images "cjxl -j 0 -d 1" jxl -s png -s jpg jpeg -r -X -v 0
-Convert videos with basename collisions in .\\vacation\movies to a cloned directory,
+    epilog='''Convert images in .\\vacation\\images to JXL in place:
+  py batch_converter.py .\\vacation\\images "cjxl -j 0 -d 1" jxl -s png -s jpg jpeg -r -X -v 0
+Convert videos with basename collisions in .\\vacation\\movies to a cloned directory,
 hiding all of FFmpeg's console output:
   py batch_converter.py .\\vacation\\movies "ffmpeg -i" mp4 -s mov 3gpp `
   -c .\\vacation\\backup -v 3 -o="-c:v libx264 -crf 22 -c:a libopus -b:a 64k" -w 1 2>NUL
