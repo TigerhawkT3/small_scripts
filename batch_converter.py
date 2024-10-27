@@ -62,7 +62,7 @@ mkdir @"
 "@ `
 '''
 if args.verbosity < 4:
-    clone += '>NUL '
+    clone += '| Out-Null '
 clone += '''}}
 '''
 template = '''{command} @"
